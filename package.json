@@ -1,0 +1,37 @@
+{
+  "name": "buying-order-agent",
+  "version": "0.0.1",
+  "description": "Sends e-mail notifications near buying orders expiration.",
+  "main": "dist/app.js",
+  "scripts": {
+    "start": "node dist/app.js",
+    "start-pm2": "pm2 start",
+    "watch-pm2": "pm2 start --watch",
+    "build-ts": "tsc",
+    "watch-ts": "tsc -w",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thomas-adriano/buying-order-agent.git"
+  },
+  "author": "thomas.o.adriano@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/thomas-adriano/buying-order-agent/issues"
+  },
+  "homepage": "https://github.com/thomas-adriano/buying-order-agent#readme",
+  "devDependencies": {
+    "@types/cron": "^1.7.1",
+    "@types/node": "^12.7.12",
+    "@types/nodemailer": "^6.2.1",
+    "pm2": "^4.0.0",
+    "rxjs": "^6.5.3",
+    "tslint": "^5.20.0",
+    "typescript": "^3.6.4"
+  },
+  "dependencies": {
+    "cron": "^1.7.2",
+    "nodemailer": "^6.3.1"
+  }
+}
