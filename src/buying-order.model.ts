@@ -1,5 +1,5 @@
 export class BuyingOrder {
-  public readonly id?: string;
+  public readonly id?: number;
   public readonly numeroPedido?: number;
   public readonly data?: string;
   public readonly dataPrevista?: string;

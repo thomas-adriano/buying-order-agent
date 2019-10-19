@@ -1,38 +1,28 @@
 import { BuyingOrder } from "./buying-order.model";
-import * as https from "https";
+import { HttpClient } from "./http-client";
+import { Observable, from, throwError } from "rxjs";
+import { map } from "rxjs/operators";
+import { Provider } from "./provider.model";
 
 export class ApiClient {
-  constructor(private jwtKey: string) {}
+  constructor(private httpClient: HttpClient) {}
 
-  public async fetchBuyingOrders(): Promise<BuyingOrder[]> {
-    return await new Promise((resolve, reject) => {
-      console.log("Fetching orders");
-      https
-        .get(
-          {
-            hostname: "inspirehome.eccosys.com.br",
-            path: "/api/ordens-de-compra",
-            headers: {
-              Authorization: `Bearer ${this.jwtKey}`,
-              Accept: "application/json",
-              "Content-Type": "application/json"
-            }
-          },
-          resp => {
-            let body = "";
-            resp.on("data", chunk => {
-              body += chunk;
-            });
-            resp.on("end", () => {
-              const json = JSON.parse(body) as any[];
-              const orders = json.map(j => new BuyingOrder(j));
-              return resolve(orders);
-            });
-          }
-        )
-        .on("error", e => {
-          reject(e);
-        });
-    });
+  public fetchBuyingOrders(): Observable<BuyingOrder[]> {
+    return from(this.httpClient.get("/api/ordens-de-compra")).pipe(
+      map((json: any[]) => {
+        if (!Array.isArray(json)) {
+          throwError(json);
+        }
+        return json.map(o => new BuyingOrder(o));
+      })
+    );
+  }
+
+  public fetchProviderById(id: string | undefined): Observable<Provider> {
+    return from(this.httpClient.get(`/api/fornecedores/${id}`)).pipe(
+      map((json: any) => {
+        return new Provider(json[0]);
+      })
+    );
   }
 }

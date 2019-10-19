@@ -23,6 +23,8 @@
   "homepage": "https://github.com/thomas-adriano/buying-order-agent#readme",
   "devDependencies": {
     "@types/cron": "^1.7.1",
+    "@types/moment": "^2.13.0",
+    "@types/mysql": "^2.15.7",
     "@types/node": "^12.7.12",
     "@types/nodemailer": "^6.2.1",
     "pm2": "^4.0.0",
@@ -32,6 +34,8 @@
   },
   "dependencies": {
     "cron": "^1.7.2",
+    "moment": "^2.24.0",
+    "mysql": "^2.17.1",
     "nodemailer": "^6.3.1"
   }
 }
