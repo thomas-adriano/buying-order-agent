@@ -1,23 +1,22 @@
 import { CronJob } from "cron";
 import * as http from "http2";
-import moment from "moment";
-import * as mysql from "mysql";
-import { Observable, Observer } from "rxjs";
-import { map } from "rxjs/operators";
-import { ApiClient } from "./http/api-client";
-import { BuyingOrder } from "./models/buying-order.model";
+
+import { Observable, Observer, BehaviorSubject, forkJoin } from "rxjs";
+import { map, mergeMap, tap, catchError } from "rxjs/operators";
+import { AppConfigs } from "./app-configs";
 import { Database } from "./db/database";
-import { EmailSender } from "./email/email-sender";
-import { HttpClient } from "./http/http-client";
 import { MigrateDb } from "./db/migrate-db";
+import { EmailSender } from "./email/email-sender";
+import { ApiClient } from "./http/api-client";
+import { HttpClient } from "./http/http-client";
+import { BuyingOrder } from "./models/buying-order.model";
+import { Repository } from "./db/repository";
 
 console.log("Buying Order Agent is starting...");
-
-const [jwtKey, employeeEmail] = process.argv.slice(2);
+const [jwtKey] = process.argv.slice(2);
 
 let server: http.Http2Server;
 let cronJob: CronJob;
-let db: Database;
 const httpClient = new HttpClient(jwtKey, "inspirehome.eccosys.com.br");
 const apiClient = new ApiClient(httpClient);
 
@@ -31,46 +30,57 @@ process.on("SIGINT", () => {
   shutdown();
 });
 
-const dbConfigsRoot: mysql.ConnectionConfig = {
-  host: "localhost",
-  user: "root",
-  password: "pass"
-};
+const configs = new AppConfigs()
+  .setDbAppUser("buyingorderagent")
+  .setDbRootUser("root")
+  .setDbRootPassword("pass")
+  .setDbHost("localhost")
+  .setAppDatabase("INSPIRE_HOME")
+  .setAppDbPassword("123")
+  .setAppCronPattern("0,5,10,15,20,25,30,35,40,45,50,55 * * * * *")
+  .setAppCronTimezone("America/Sao_Paulo")
+  .setAppServerHost("0.0.0.0")
+  .setAppServerPort(8888)
+  .setAppSMTPSecure(false)
+  .setAppEmailName("viola.von@ethereal.email")
+  .setAppEmailUser("viola.von@ethereal.email")
+  .setAppEmailSubject("Aviso de atraso")
+  .setAppEmailPassword("Q61Z2qsRsmg7nUEzNG")
+  .setAppEmailEmployee("test@test.com");
 
-const dbConfigs: mysql.ConnectionConfig = {
-  host: "localhost",
-  user: "buyingorderagent",
-  password: "123",
-  database: "INSPIRE_HOME"
-};
+const db = new Database({
+  database: configs.getAppDatabase(),
+  host: configs.getDbHost(),
+  password: configs.getAppDbPassword(),
+  user: configs.getDbAppUser()
+});
 
-MigrateDb.init(dbConfigsRoot).subscribe(() => {
+MigrateDb.init(configs).subscribe(() => {
   startServer().subscribe(
     () => {
       console.log("Buying Order Agent server has started.");
-      runOrdersVerification().subscribe(() => {
-        console.log("orders verified");
-      });
+      db.init();
+      runOrdersVerification(db).subscribe(() => {});
       startCron();
     },
     err => {
-      console.error("server startup error");
+      console.error("server startup error", err);
     }
   );
 });
 
 function startCron(): void {
   cronJob = new CronJob(
-    "0,5,10,15,20,25,30,35,40,45,50,55 * * * * *",
+    configs.getAppCronPattern(),
     () => {
       console.log("Running Cron job");
-      runOrdersVerification().subscribe(() => {
+      runOrdersVerification(db).subscribe(() => {
         console.log("orders verified");
       });
     },
     undefined,
     true,
-    "America/Sao_Paulo"
+    configs.getAppCronTimezone()
   );
 
   cronJob.start();
@@ -84,63 +94,47 @@ function startServer(): Observable<void> {
   });
 
   return Observable.create((observer: Observer<any>) => {
-    server.listen(8888, "0.0.0.0", () => {
-      observer.next(0);
-    });
+    server.listen(
+      configs.getAppServerPort(),
+      configs.getAppServerHost(),
+      () => {
+        observer.next(0);
+      }
+    );
     server.on("error", err => observer.error(err));
   });
 }
 
-function runOrdersVerification(): Observable<void> {
-  db = new Database(dbConfigs);
-
+function runOrdersVerification(db: Database): Observable<boolean> {
+  const repository = new Repository(db);
   const emailSender = new EmailSender({
-    host: "smtp.ethereal.email",
-    port: 587,
-    secure: false, // true for 465, false for other ports
+    host: configs.getAppSMTPAddress(),
+    port: configs.getAppSMTPPort(),
+    secure: configs.getAppSMTPSecure(), // true for 465, false for other ports
     auth: {
-      user: "viola.von@ethereal.email", // generated ethereal user
-      pass: "Q61Z2qsRsmg7nUEzNG" // generated ethereal password
+      user: configs.getAppEmailUser(), // generated ethereal user
+      pass: configs.getAppEmailPassword() // generated ethereal password
     }
   });
 
   return apiClient.fetchBuyingOrders().pipe(
-    map(orders => {
-      persistNotificationLog(orders[0]);
-      // create reusable transporter object using the default SMTP transport
-      emailSender.sendEmail({
-        from: '"Fred Foo 👻" <foo@example.com>', // sender address
-        to: "viola.von@ethereal.email", // list of receivers
-        subject: "Hello ✔", // Subject line
-        text: orders
-          .map(o => `${o.idContato} - ${o.nomeContato}`)
-          .reduce((a, b) => (a += b)), // plain text body
-        html: "<b>Hello world?</b>" // html body
+    mergeMap(orders => {
+      const observables = orders.map(order => {
+        return apiClient.fetchProviderById(order.idContato).pipe(
+          tap(provider => {
+            repository
+              .persistNotificationLog(provider, order, configs)
+              .subscribe(persisted => {});
+            // emailSender.sendEmail("viola.von@ethereal.email", configs);
+          })
+        );
       });
+      return forkJoin(observables).pipe(
+        map(() => true),
+        catchError(err => new BehaviorSubject(false).asObservable())
+      );
     })
   );
-}
-
-function persistNotificationLog(order: BuyingOrder): void {
-  db.init();
-  apiClient.fetchProviderById(order.idContato).subscribe(provider => {
-    db.execute(
-      `INSERT INTO \`INSPIRE_HOME\`.\`order-notification\` (timestamp,sent,customerEmail,employeeEmail,orderDate,estimatedOrderDate) VALUES (
-        '${moment().format("YYYY/MM/DD HH:mm:ss")}',
-        ${true},
-        '${provider.email}',
-        '${employeeEmail}',
-        '${moment(order.data, "DD-MM-YYYY").format("YYYY-MM-DD")}',
-        '${moment(order.dataPrevista, "DD-MM-YYYY").format("YYYY-MM-DD")}');`
-    ).subscribe(
-      () => console.log("notification logged into db"),
-      err => {
-        console.log("error trying to log notification into db", err);
-        shutdown();
-      }
-    );
-    db.end();
-  });
 }
 
 function shutdown(): void {

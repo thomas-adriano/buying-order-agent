@@ -2,6 +2,6 @@ export interface IOrderNotification {
   id: number;
   timestamp: Date;
   sent: boolean;
-  customerEmail: string;
+  providerEmail: string;
   employeeEmail: string;
 }

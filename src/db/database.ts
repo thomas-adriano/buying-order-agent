@@ -8,6 +8,9 @@ export class Database {
   constructor(private cfg: mysql.ConnectionConfig) {}
 
   public init(): void {
+    if (this.connection) {
+      return;
+    }
     this.connection = mysql.createConnection(this.cfg);
   }
 
@@ -31,9 +34,11 @@ export class Database {
 
   public end(): void {
     this.connection.end();
+    this.connected = false;
   }
 
   public destroy(): void {
     this.connection.destroy();
+    this.connected = false;
   }
 }

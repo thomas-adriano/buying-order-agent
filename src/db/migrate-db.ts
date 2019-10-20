@@ -1,18 +1,29 @@
 import * as mysql from "mysql";
-import { Observable, zip } from "rxjs";
-import { tap } from "rxjs/operators";
+import { Observable, zip, EMPTY, BehaviorSubject } from "rxjs";
+import { tap, map } from "rxjs/operators";
+import { AppConfigs } from "../app-configs";
 import { Database } from "./database";
 
 export class MigrateDb {
-  public static init(cfg: mysql.ConnectionConfig): Observable<any> {
+  public static init(configs: AppConfigs): Observable<any> {
+    const cfg: mysql.ConnectionConfig = {
+      host: configs.getDbHost(),
+      password: configs.getDbRootPassword(),
+      user: configs.getDbRootUser()
+    };
     console.log("executing migrations");
     const database = new Database(cfg);
     database.init();
     return zip(
-      MigrateDb.createDb(database),
-      MigrateDb.createUser(database),
-      MigrateDb.grantPermissions(database),
-      MigrateDb.createTables(database)
+      MigrateDb.createDb(database, configs),
+      MigrateDb.createUser(database, configs).pipe(
+        tap(ran => {
+          if (ran) {
+            MigrateDb.grantPermissions(database, configs);
+          }
+        })
+      ),
+      MigrateDb.createTables(database, configs)
     ).pipe(
       tap(() => {
         database.end();
@@ -20,38 +31,75 @@ export class MigrateDb {
     );
   }
 
-  private static createTables(database: Database): Observable<void> {
-    return database.execute(
-      `CREATE TABLE IF NOT EXISTS \`INSPIRE_HOME\`.\`order-notification\` (
+  private static createTables(
+    database: Database,
+    configs: AppConfigs
+  ): Observable<boolean> {
+    try {
+      return database
+        .execute(
+          `CREATE TABLE IF NOT EXISTS \`${configs.getAppDatabase()}\`.\`order-notification\` (
             \`id\` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            \`providerId\` INT NOT NULL,
             \`timestamp\` DATETIME NOT NULL,
-            \`sent\` BOOL NOT NULL,
-            \`orderDate\` DATE NOT NULL,
-            \`estimatedOrderDate\` DATE NOT NULL,
-            \`customerEmail\` VARCHAR(128) NOT NULL,
-            \`employeeEmail\` VARCHAR(128) NOT NULL
+            \`sent\` BOOL,
+            \`orderDate\` DATE,
+            \`estimatedOrderDate\` DATE,
+            \`providerEmail\` VARCHAR(128),
+            \`employeeEmail\` VARCHAR(128)
           )
           ENGINE = InnoDB;`
-    );
+        )
+        .pipe(map(() => true));
+    } catch (e) {
+      return new BehaviorSubject(false);
+    }
   }
 
-  private static createDb(database: Database): Observable<void> {
-    return database.execute(
-      `CREATE DATABASE IF NOT EXISTS INSPIRE_HOME
+  private static createDb(
+    database: Database,
+    configs: AppConfigs
+  ): Observable<boolean> {
+    try {
+      return database
+        .execute(
+          `CREATE DATABASE IF NOT EXISTS ${configs.getAppDatabase()}
        CHARACTER SET utf8
        COLLATE utf8_unicode_ci`
-    );
+        )
+        .pipe(map(() => true));
+    } catch (e) {
+      return new BehaviorSubject(false);
+    }
   }
 
-  private static createUser(database: Database): Observable<void> {
-    return database.execute(
-      `CREATE USER 'buyingorderagent' IDENTIFIED BY '123'`
-    );
+  private static createUser(
+    database: Database,
+    configs: AppConfigs
+  ): Observable<boolean> {
+    try {
+      return database
+        .execute(
+          `CREATE USER IF NOT EXISTS '${configs.getDbAppUser()}' IDENTIFIED BY '${configs.getAppDbPassword()}'`
+        )
+        .pipe(map(() => true));
+    } catch (e) {
+      return new BehaviorSubject(false);
+    }
   }
 
-  private static grantPermissions(database: Database): Observable<void> {
-    return database.execute(
-      `GRANT ALL ON INSPIRE_HOME.* TO 'buyingorderagent'`
-    );
+  private static grantPermissions(
+    database: Database,
+    configs: AppConfigs
+  ): Observable<boolean> {
+    try {
+      return database
+        .execute(
+          `GRANT ALL ON ${configs.getDbAppUser()}.* TO '${configs.getAppDbPassword()}'`
+        )
+        .pipe(map(() => true));
+    } catch (e) {
+      return new BehaviorSubject(false);
+    }
   }
 }
