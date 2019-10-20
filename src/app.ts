@@ -1,15 +1,15 @@
 import { CronJob } from "cron";
 import * as http from "http2";
+import moment from "moment";
 import * as mysql from "mysql";
 import { Observable, Observer } from "rxjs";
-import { map, last } from "rxjs/operators";
-import { ApiClient } from "./api-client";
-import { Database } from "./database";
-import { EmailSender } from "./email-sender";
-import { HttpClient } from "./http-client";
-import { MigrateDb } from "./migrate-db";
-import * as moment from "moment";
-import { BuyingOrder } from "./buying-order.model";
+import { map } from "rxjs/operators";
+import { ApiClient } from "./http/api-client";
+import { BuyingOrder } from "./models/buying-order.model";
+import { Database } from "./db/database";
+import { EmailSender } from "./email/email-sender";
+import { HttpClient } from "./http/http-client";
+import { MigrateDb } from "./db/migrate-db";
 
 console.log("Buying Order Agent is starting...");
 
@@ -31,6 +31,12 @@ process.on("SIGINT", () => {
   shutdown();
 });
 
+const dbConfigsRoot: mysql.ConnectionConfig = {
+  host: "localhost",
+  user: "root",
+  password: "pass"
+};
+
 const dbConfigs: mysql.ConnectionConfig = {
   host: "localhost",
   user: "buyingorderagent",
@@ -38,7 +44,7 @@ const dbConfigs: mysql.ConnectionConfig = {
   database: "INSPIRE_HOME"
 };
 
-MigrateDb.init(dbConfigs).subscribe(() => {
+MigrateDb.init(dbConfigsRoot).subscribe(() => {
   startServer().subscribe(
     () => {
       console.log("Buying Order Agent server has started.");
@@ -119,11 +125,13 @@ function persistNotificationLog(order: BuyingOrder): void {
   db.init();
   apiClient.fetchProviderById(order.idContato).subscribe(provider => {
     db.execute(
-      `INSERT INTO \`INSPIRE_HOME\`.\`order-notification\` (timestamp,sent,customerEmail,employeeEmail) VALUES (
-        '${moment.utc(new Date()).format("YYYY/MM/DD HH:mm:ss")}',
+      `INSERT INTO \`INSPIRE_HOME\`.\`order-notification\` (timestamp,sent,customerEmail,employeeEmail,orderDate,estimatedOrderDate) VALUES (
+        '${moment().format("YYYY/MM/DD HH:mm:ss")}',
         ${true},
         '${provider.email}',
-        '${employeeEmail}');`
+        '${employeeEmail}',
+        '${moment(order.data, "DD-MM-YYYY").format("YYYY-MM-DD")}',
+        '${moment(order.dataPrevista, "DD-MM-YYYY").format("YYYY-MM-DD")}');`
     ).subscribe(
       () => console.log("notification logged into db"),
       err => {

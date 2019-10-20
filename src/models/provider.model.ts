@@ -14,6 +14,7 @@ export class Provider {
   public readonly fax?: string;
   public readonly celular?: string;
   public readonly email?: string;
+  // tslint:disable-next-line: variable-name
   public readonly email_nfe?: string;
   public readonly site?: string;
   public readonly obs?: string;
@@ -26,7 +27,7 @@ export class Provider {
   public readonly estadoCivil?: number;
   public readonly profissao?: string;
   public readonly localTrabalho?: string;
-  public readonly dataNascimento?: Date;
+  public readonly dataNascimento?: string;
   public readonly naturalidade?: string;
   public readonly enderecoNro?: string;
   public readonly complemento?: string;
@@ -43,7 +44,7 @@ export class Provider {
   public readonly idvendedor?: number;
   public readonly codigoNoFornecedor?: string;
   public readonly tipoNegocio?: string;
-  public readonly dataUltimaCompra?: Date;
+  public readonly dataUltimaCompra?: string;
   public readonly idSegmentoCliente?: number;
   public readonly limiteCredito?: number;
   public readonly dadosBancariosPO?: string;
@@ -53,7 +54,7 @@ export class Provider {
   public readonly areaAtuacao?: number;
   public readonly emitirBoleto?: string;
   public readonly idFaixaFaturamento?: number;
-  public readonly dtCriacao?: Date;
+  public readonly dtCriacao?: string;
 
   constructor(partial?: Partial<Provider>) {
     Object.assign(this, partial);

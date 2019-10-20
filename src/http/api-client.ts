@@ -1,8 +1,8 @@
-import { BuyingOrder } from "./buying-order.model";
+import { BuyingOrder } from "../models/buying-order.model";
 import { HttpClient } from "./http-client";
 import { Observable, from, throwError } from "rxjs";
 import { map } from "rxjs/operators";
-import { Provider } from "./provider.model";
+import { Provider } from "../models/provider.model";
 
 export class ApiClient {
   constructor(private httpClient: HttpClient) {}
