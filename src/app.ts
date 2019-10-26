@@ -1,52 +1,52 @@
-import { CronJob } from "cron";
-import * as http from "http2";
+import { CronJob } from 'cron';
+import * as http from 'http2';
 
-import { Observable, Observer, BehaviorSubject, forkJoin } from "rxjs";
-import { map, mergeMap, tap, catchError } from "rxjs/operators";
-import { AppConfigs } from "./app-configs";
-import { Database } from "./db/database";
-import { MigrateDb } from "./db/migrate-db";
-import { EmailSender } from "./email/email-sender";
-import { ApiClient } from "./http/api-client";
-import { HttpClient } from "./http/http-client";
-import { BuyingOrder } from "./models/buying-order.model";
-import { Repository } from "./db/repository";
+import { Observable, Observer, BehaviorSubject, forkJoin } from 'rxjs';
+import { map, mergeMap, tap, catchError } from 'rxjs/operators';
+import { AppConfigs } from './app-configs';
+import { Database } from './db/database';
+import { MigrateDb } from './db/migrate-db';
+import { EmailSender } from './email/email-sender';
+import { ApiClient } from './http/api-client';
+import { HttpClient } from './http/http-client';
+import { BuyingOrder } from './models/buying-order.model';
+import { Repository } from './db/repository';
 
-console.log("Buying Order Agent is starting...");
+console.log('Buying Order Agent is starting...');
 const [jwtKey] = process.argv.slice(2);
 
 let server: http.Http2Server;
 let cronJob: CronJob;
-const httpClient = new HttpClient(jwtKey, "inspirehome.eccosys.com.br");
+const httpClient = new HttpClient(jwtKey, 'inspirehome.eccosys.com.br');
 const apiClient = new ApiClient(httpClient);
 
-process.on("message", msg => {
-  if (msg === "shutdown") {
+process.on('message', msg => {
+  if (msg === 'shutdown') {
     shutdown();
   }
 });
 
-process.on("SIGINT", () => {
+process.on('SIGINT', () => {
   shutdown();
 });
 
 const configs = new AppConfigs()
-  .setDbAppUser("buyingorderagent")
-  .setDbRootUser("root")
-  .setDbRootPassword("pass")
-  .setDbHost("localhost")
-  .setAppDatabase("INSPIRE_HOME")
-  .setAppDbPassword("123")
-  .setAppCronPattern("0,5,10,15,20,25,30,35,40,45,50,55 * * * * *")
-  .setAppCronTimezone("America/Sao_Paulo")
-  .setAppServerHost("0.0.0.0")
+  .setDbAppUser('buyingorderagent')
+  .setDbRootUser('root')
+  .setDbRootPassword('pass')
+  .setDbHost('localhost')
+  .setAppDatabase('INSPIRE_HOME')
+  .setDbAppPassword('123')
+  .setAppCronPattern('0,5,10,15,20,25,30,35,40,45,50,55 * * * * *')
+  .setAppCronTimezone('America/Sao_Paulo')
+  .setAppServerHost('0.0.0.0')
   .setAppServerPort(8888)
   .setAppSMTPSecure(false)
-  .setAppEmailName("viola.von@ethereal.email")
-  .setAppEmailUser("viola.von@ethereal.email")
-  .setAppEmailSubject("Aviso de atraso")
-  .setAppEmailPassword("Q61Z2qsRsmg7nUEzNG")
-  .setAppEmailEmployee("test@test.com");
+  .setAppEmailName('viola.von@ethereal.email')
+  .setAppEmailUser('viola.von@ethereal.email')
+  .setAppEmailSubject('Aviso de atraso')
+  .setAppEmailPassword('Q61Z2qsRsmg7nUEzNG')
+  .setAppEmailEmployee('test@test.com');
 
 const db = new Database({
   database: configs.getAppDatabase(),
@@ -58,13 +58,13 @@ const db = new Database({
 MigrateDb.init(configs).subscribe(() => {
   startServer().subscribe(
     () => {
-      console.log("Buying Order Agent server has started.");
+      console.log('Buying Order Agent server has started.');
       db.init();
       runOrdersVerification(db).subscribe(() => {});
       startCron();
     },
     err => {
-      console.error("server startup error", err);
+      console.error('server startup error', err);
     }
   );
 });
@@ -73,9 +73,9 @@ function startCron(): void {
   cronJob = new CronJob(
     configs.getAppCronPattern(),
     () => {
-      console.log("Running Cron job");
+      console.log('Running Cron job');
       runOrdersVerification(db).subscribe(() => {
-        console.log("orders verified");
+        console.log('orders verified');
       });
     },
     undefined,
@@ -88,7 +88,7 @@ function startCron(): void {
 
 function startServer(): Observable<void> {
   server = http.createServer((req, res) => {
-    res.writeHead(200, { "Content-Type": "text/html" });
+    res.writeHead(200, { 'Content-Type': 'text/html' });
     res.write(`running`);
     res.end();
   });
@@ -101,7 +101,7 @@ function startServer(): Observable<void> {
         observer.next(0);
       }
     );
-    server.on("error", err => observer.error(err));
+    server.on('error', err => observer.error(err));
   });
 }
 
@@ -138,7 +138,7 @@ function runOrdersVerification(db: Database): Observable<boolean> {
 }
 
 function shutdown(): void {
-  console.log("Buying Order Agent is shutting down");
+  console.log('Buying Order Agent is shutting down');
   if (db) {
     db.destroy();
   }

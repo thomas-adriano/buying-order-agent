@@ -1,8 +1,8 @@
-import * as mysql from "mysql";
-import { Observable, zip, EMPTY, BehaviorSubject } from "rxjs";
-import { tap, map } from "rxjs/operators";
-import { AppConfigs } from "../app-configs";
-import { Database } from "./database";
+import * as mysql from 'mysql';
+import { Observable, zip, EMPTY, BehaviorSubject } from 'rxjs';
+import { tap, map } from 'rxjs/operators';
+import { AppConfigs } from '../app-configs';
+import { Database } from './database';
 
 export class MigrateDb {
   public static init(configs: AppConfigs): Observable<any> {
@@ -11,7 +11,7 @@ export class MigrateDb {
       password: configs.getDbRootPassword(),
       user: configs.getDbRootUser()
     };
-    console.log("executing migrations");
+    console.log('executing migrations');
     const database = new Database(cfg);
     database.init();
     return zip(
@@ -80,7 +80,7 @@ export class MigrateDb {
     try {
       return database
         .execute(
-          `CREATE USER IF NOT EXISTS '${configs.getDbAppUser()}' IDENTIFIED BY '${configs.getAppDbPassword()}'`
+          `CREATE USER IF NOT EXISTS '${configs.getDbAppUser()}' IDENTIFIED BY '${configs.getDbAppPassword()}'`
         )
         .pipe(map(() => true));
     } catch (e) {
@@ -95,7 +95,7 @@ export class MigrateDb {
     try {
       return database
         .execute(
-          `GRANT ALL ON ${configs.getDbAppUser()}.* TO '${configs.getAppDbPassword()}'`
+          `GRANT ALL ON ${configs.getDbAppUser()}.* TO '${configs.getDbAppPassword()}'`
         )
         .pipe(map(() => true));
     } catch (e) {

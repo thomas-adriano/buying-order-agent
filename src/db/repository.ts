@@ -1,10 +1,10 @@
-import moment from "moment";
-import { AppConfigs } from "../app-configs";
-import { BuyingOrder } from "../models/buying-order.model";
-import { Database } from "./database";
-import { Provider } from "../models/provider.model";
-import { Observable, BehaviorSubject } from "rxjs";
-import { catchError, map } from "rxjs/operators";
+import moment from 'moment';
+import { AppConfigs } from '../app-configs';
+import { BuyingOrder } from '../models/buying-order.model';
+import { Database } from './database';
+import { Provider } from '../models/provider.model';
+import { Observable, BehaviorSubject } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
 export class Repository {
   constructor(private db: Database) {}
@@ -14,13 +14,13 @@ export class Repository {
     order: BuyingOrder,
     configs: AppConfigs
   ): Observable<boolean> {
-    const todayDate = moment().format("YYYY/MM/DD HH:mm:ss");
-    const emptyDate = moment("01-01-1970", "DD-MM-YYYY").format("YYYY-MM-DD");
+    const todayDate = moment().format('YYYY/MM/DD HH:mm:ss');
+    const emptyDate = moment('01-01-1970', 'DD-MM-YYYY').format('YYYY-MM-DD');
     const orderDate = order.data
-      ? moment(order.data, "DD-MM-YYYY").format("YYYY-MM-DD")
+      ? moment(order.data, 'DD-MM-YYYY').format('YYYY-MM-DD')
       : emptyDate;
     const previewOrderDate = order.dataPrevista
-      ? moment(order.dataPrevista, "DD-MM-YYYY").format("YYYY-MM-DD")
+      ? moment(order.dataPrevista, 'DD-MM-YYYY').format('YYYY-MM-DD')
       : emptyDate;
     return this.db
       .execute(
@@ -28,18 +28,18 @@ export class Repository {
               '${todayDate}',
               ${true},
               '${provider.email}',
-              '${configs.getAppEmailEmployee()}',
+              '${configs.getAppEmailFrom()}',
               '${orderDate}',
               '${previewOrderDate}',
               ${order.idContato});`
       )
       .pipe(
         map(() => {
-          console.log("notification logged into db");
+          console.log('notification logged into db');
           return true;
         }),
         catchError(err => {
-          console.log("error trying to log notification into db", err);
+          console.log('error trying to log notification into db', err);
           return new BehaviorSubject(false).asObservable();
         })
       );

@@ -4,7 +4,7 @@ export class AppConfigs {
   private dbRootUser: string;
   private dbRootPassword: string;
   private dbAppUser: string;
-  private appDbPassword: string;
+  private dbAppPassword: string;
   private appDatabase: string;
   // email
   private appEmailName: string;
@@ -13,7 +13,6 @@ export class AppConfigs {
   private appSMTPAddress: string;
   private appSMTPPort: number;
   private appSMTPSecure: boolean;
-  private appEmailEmployee: string;
   private appEmailFrom: string;
   private appEmailSubject: string;
   private appEmailText: string;
@@ -21,8 +20,8 @@ export class AppConfigs {
   private appServerHost: string;
   private appServerPort: number;
   // cron
-  private appCronPattern = "0,5,10,15,20,25,30,35,40,45,50,55 * * * * *";
-  private appCronTimezone = "America/Sao_Paulo";
+  private appCronPattern = '0,5,10,15,20,25,30,35,40,45,50,55 * * * * *';
+  private appCronTimezone = 'America/Sao_Paulo';
 
   public getAppServerHost(): string {
     return this.appServerHost;
@@ -78,12 +77,12 @@ export class AppConfigs {
     return this;
   }
 
-  public getAppDbPassword(): string {
-    return this.appDbPassword;
+  public getDbAppPassword(): string {
+    return this.dbAppPassword;
   }
 
-  public setAppDbPassword(appDbPassword: string): AppConfigs {
-    this.appDbPassword = appDbPassword;
+  public setDbAppPassword(appDbPassword: string): AppConfigs {
+    this.dbAppPassword = appDbPassword;
     return this;
   }
 
@@ -150,14 +149,6 @@ export class AppConfigs {
     return this;
   }
 
-  public getAppEmailEmployee(): string {
-    return this.appEmailEmployee;
-  }
-
-  public setAppEmailEmployee(appEmailEmployee: string): AppConfigs {
-    this.appEmailEmployee = appEmailEmployee;
-    return this;
-  }
   public getAppEmailFrom(): string {
     return this.appEmailFrom;
   }
