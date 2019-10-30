@@ -1,5 +1,4 @@
 import { CronJob } from 'cron';
-import * as http from 'http';
 import * as fs from 'fs';
 import { Observable, Observer, BehaviorSubject, forkJoin, EMPTY } from 'rxjs';
 import { map, mergeMap, tap, catchError } from 'rxjs/operators';
@@ -9,13 +8,12 @@ import { MigrateDb } from './db/migrate-db';
 import { EmailSender } from './email/email-sender';
 import { ApiClient } from './http/api-client';
 import { HttpClient } from './http/http-client';
-import * as url from 'url';
 import { Repository } from './db/repository';
+import { HttpServer } from './http/http-server';
 
 console.log('Buying Order Agent is starting...');
 const [jwtKey] = process.argv.slice(2);
 
-let server: http.Server;
 let cronJob: CronJob;
 const httpClient = new HttpClient(jwtKey, 'inspirehome.eccosys.com.br');
 const apiClient = new ApiClient(httpClient);
@@ -29,9 +27,6 @@ process.on('message', msg => {
 process.on('SIGINT', () => {
   shutdown();
 });
-
-let rawdata = fs.readFileSync('./configs.json');
-let serverLocalConfigs = JSON.parse(rawdata as any);
 
 const configs = new AppConfigs()
   .setDbAppUser('buyingorderagent')
@@ -51,6 +46,8 @@ const configs = new AppConfigs()
   .setAppEmailPassword('Q61Z2qsRsmg7nUEzNG')
   .setAppEmailFrom('test@test.com');
 
+const httpServer = new HttpServer(configs);
+
 const db = new Database({
   database: configs.getAppDatabase(),
   host: configs.getDbHost(),
@@ -59,7 +56,7 @@ const db = new Database({
 });
 
 MigrateDb.init(configs).subscribe(() => {
-  startServer().subscribe(
+  httpServer.startServer().subscribe(
     () => {
       console.log('Buying Order Agent server has started.');
       // db.init();
@@ -90,57 +87,6 @@ function startCron(): void {
   );
 
   cronJob.start();
-}
-
-function startServer(): Observable<void> {
-  server = http.createServer((req, res) => {
-    const pathName = url.parse(req.url as any).pathname;
-
-    console.log('req', req.method);
-    if (req.method === 'OPTIONS') {
-      res.writeHead(200, {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': serverLocalConfigs.frontendUrl,
-        'Access-Control-Allow-Methods': 'POST, GET, PUT, DELETE',
-        'Access-Control-Allow-Headers': 'content-type'
-        Origin: serverLocalConfigs.frontendUrl
-      });
-      res.end();
-    }
-    if (req.method === 'POST') {
-      if (pathName === '/configuration') {
-        console.log('Configurations saved');
-        let body = '';
-        req.on('data', chunk => {
-          body += chunk;
-        });
-        req.on('end', () => {
-          const json = JSON.parse(body);
-          console.log(json);
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.write(
-            JSON.stringify({
-              status: 200,
-              msg: 'Configurations saved'
-            })
-          );
-          res.end();
-        });
-
-      }
-    }
-  });
-
-  return Observable.create((observer: Observer<any>) => {
-    server.listen(
-      configs.getAppServerPort(),
-      configs.getAppServerHost(),
-      () => {
-        observer.next(0);
-      }
-    );
-    server.on('error', err => observer.error(err));
-  });
 }
 
 function runOrdersVerification(db: Database): Observable<boolean> {
@@ -185,7 +131,7 @@ function shutdown(): void {
   if (cronJob) {
     cronJob.stop();
   }
-  if (server) {
-    server.close();
+  if (httpServer) {
+    httpServer.shutdown();
   }
 }

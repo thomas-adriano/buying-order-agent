@@ -7,9 +7,8 @@
     "start": "node dist/app.js",
     "start-pm2": "pm2 start",
     "watch-pm2": "pm2 start --watch",
-    "build-ts": "npm run copy-configs && tsc",
-    "watch-ts": "npm run copy-configs && tsc -w",
-    "copy-configs": "cp ./configs.json ./dist/configs.json",
+    "build-ts": "tsc",
+    "watch-ts": "tsc -w",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
