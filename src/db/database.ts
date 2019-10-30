@@ -1,5 +1,5 @@
-import * as mysql from "mysql";
-import { Observable, Observer } from "rxjs";
+import * as mysql from 'mysql';
+import { Observable, Observer } from 'rxjs';
 
 export class Database {
   private connection: mysql.Connection;
@@ -8,9 +8,6 @@ export class Database {
   constructor(private cfg: mysql.ConnectionConfig) {}
 
   public init(): void {
-    if (this.connection) {
-      return;
-    }
     this.connection = mysql.createConnection(this.cfg);
   }
 
@@ -21,24 +18,26 @@ export class Database {
     }
 
     return Observable.create((observer: Observer<any>) => {
-      this.connection.query(stmt, (error, results, fields) => {
-        if (error) {
-          observer.error(error);
-          return;
-        }
-        observer.next(results);
-        observer.complete();
-      });
+      try {
+        this.connection.query(stmt, (error, results, fields) => {
+          if (error) {
+            observer.error(error);
+            return;
+          }
+          observer.next(results);
+          observer.complete();
+        });
+      } catch (e) {
+        observer.error(e);
+      }
     });
   }
 
   public end(): void {
     this.connection.end();
-    this.connected = false;
   }
 
   public destroy(): void {
     this.connection.destroy();
-    this.connected = false;
   }
 }

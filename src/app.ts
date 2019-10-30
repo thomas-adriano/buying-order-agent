@@ -1,7 +1,7 @@
 import { CronJob } from 'cron';
-import * as http from 'http2';
-
-import { Observable, Observer, BehaviorSubject, forkJoin } from 'rxjs';
+import * as http from 'http';
+import * as fs from 'fs';
+import { Observable, Observer, BehaviorSubject, forkJoin, EMPTY } from 'rxjs';
 import { map, mergeMap, tap, catchError } from 'rxjs/operators';
 import { AppConfigs } from './app-configs';
 import { Database } from './db/database';
@@ -9,13 +9,13 @@ import { MigrateDb } from './db/migrate-db';
 import { EmailSender } from './email/email-sender';
 import { ApiClient } from './http/api-client';
 import { HttpClient } from './http/http-client';
-import { BuyingOrder } from './models/buying-order.model';
+import * as url from 'url';
 import { Repository } from './db/repository';
 
 console.log('Buying Order Agent is starting...');
 const [jwtKey] = process.argv.slice(2);
 
-let server: http.Http2Server;
+let server: http.Server;
 let cronJob: CronJob;
 const httpClient = new HttpClient(jwtKey, 'inspirehome.eccosys.com.br');
 const apiClient = new ApiClient(httpClient);
@@ -29,6 +29,9 @@ process.on('message', msg => {
 process.on('SIGINT', () => {
   shutdown();
 });
+
+let rawdata = fs.readFileSync('./configs.json');
+let serverLocalConfigs = JSON.parse(rawdata as any);
 
 const configs = new AppConfigs()
   .setDbAppUser('buyingorderagent')
@@ -46,12 +49,12 @@ const configs = new AppConfigs()
   .setAppEmailUser('viola.von@ethereal.email')
   .setAppEmailSubject('Aviso de atraso')
   .setAppEmailPassword('Q61Z2qsRsmg7nUEzNG')
-  .setAppEmailEmployee('test@test.com');
+  .setAppEmailFrom('test@test.com');
 
 const db = new Database({
   database: configs.getAppDatabase(),
   host: configs.getDbHost(),
-  password: configs.getAppDbPassword(),
+  password: configs.getDbAppPassword(),
   user: configs.getDbAppUser()
 });
 
@@ -59,9 +62,9 @@ MigrateDb.init(configs).subscribe(() => {
   startServer().subscribe(
     () => {
       console.log('Buying Order Agent server has started.');
-      db.init();
-      runOrdersVerification(db).subscribe(() => {});
-      startCron();
+      // db.init();
+      // runOrdersVerification(db).subscribe(() => {});
+      // startCron();
     },
     err => {
       console.error('server startup error', err);
@@ -74,9 +77,12 @@ function startCron(): void {
     configs.getAppCronPattern(),
     () => {
       console.log('Running Cron job');
-      runOrdersVerification(db).subscribe(() => {
-        console.log('orders verified');
-      });
+      runOrdersVerification(db).subscribe(
+        () => {
+          console.log('orders verified');
+        },
+        err => console.error(err)
+      );
     },
     undefined,
     true,
@@ -88,9 +94,41 @@ function startCron(): void {
 
 function startServer(): Observable<void> {
   server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.write(`running`);
-    res.end();
+    const pathName = url.parse(req.url as any).pathname;
+
+    console.log('req', req.method);
+    if (req.method === 'OPTIONS') {
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': serverLocalConfigs.frontendUrl,
+        'Access-Control-Allow-Methods': 'POST, GET, PUT, DELETE',
+        'Access-Control-Allow-Headers': 'content-type'
+        Origin: serverLocalConfigs.frontendUrl
+      });
+      res.end();
+    }
+    if (req.method === 'POST') {
+      if (pathName === '/configuration') {
+        console.log('Configurations saved');
+        let body = '';
+        req.on('data', chunk => {
+          body += chunk;
+        });
+        req.on('end', () => {
+          const json = JSON.parse(body);
+          console.log(json);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.write(
+            JSON.stringify({
+              status: 200,
+              msg: 'Configurations saved'
+            })
+          );
+          res.end();
+        });
+
+      }
+    }
   });
 
   return Observable.create((observer: Observer<any>) => {
@@ -119,9 +157,11 @@ function runOrdersVerification(db: Database): Observable<boolean> {
 
   return apiClient.fetchBuyingOrders().pipe(
     mergeMap(orders => {
-      const observables = orders.map(order => {
+      const observables = orders.map((order, i) => {
+        console.log(`${i} of ${orders.length} orders processed`);
         return apiClient.fetchProviderById(order.idContato).pipe(
           tap(provider => {
+            console.log(provider && provider.email);
             repository
               .persistNotificationLog(provider, order, configs)
               .subscribe(persisted => {});

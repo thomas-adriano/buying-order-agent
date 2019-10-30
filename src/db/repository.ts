@@ -3,7 +3,7 @@ import { AppConfigs } from '../app-configs';
 import { BuyingOrder } from '../models/buying-order.model';
 import { Database } from './database';
 import { Provider } from '../models/provider.model';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, EMPTY } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 export class Repository {
@@ -14,6 +14,17 @@ export class Repository {
     order: BuyingOrder,
     configs: AppConfigs
   ): Observable<boolean> {
+    if (
+      !provider ||
+      !provider.email ||
+      !order ||
+      !order.idContato ||
+      !order.data ||
+      !order.dataPrevista ||
+      !configs
+    ) {
+      return EMPTY;
+    }
     const todayDate = moment().format('YYYY/MM/DD HH:mm:ss');
     const emptyDate = moment('01-01-1970', 'DD-MM-YYYY').format('YYYY-MM-DD');
     const orderDate = order.data
@@ -39,7 +50,7 @@ export class Repository {
           return true;
         }),
         catchError(err => {
-          console.log('error trying to log notification into db', err);
+          console.error('error trying to log notification into db', err);
           return new BehaviorSubject(false).asObservable();
         })
       );

@@ -1,6 +1,6 @@
 import * as mysql from 'mysql';
 import { Observable, zip, EMPTY, BehaviorSubject } from 'rxjs';
-import { tap, map } from 'rxjs/operators';
+import { tap, map, catchError } from 'rxjs/operators';
 import { AppConfigs } from '../app-configs';
 import { Database } from './database';
 
@@ -11,24 +11,29 @@ export class MigrateDb {
       password: configs.getDbRootPassword(),
       user: configs.getDbRootUser()
     };
-    console.log('executing migrations');
-    const database = new Database(cfg);
-    database.init();
-    return zip(
-      MigrateDb.createDb(database, configs),
-      MigrateDb.createUser(database, configs).pipe(
-        tap(ran => {
-          if (ran) {
-            MigrateDb.grantPermissions(database, configs);
-          }
-        })
-      ),
-      MigrateDb.createTables(database, configs)
-    ).pipe(
-      tap(() => {
-        database.end();
-      })
-    );
+    try {
+      console.log('executing migrations');
+      const database = new Database(cfg);
+      database.init();
+      return zip(
+        MigrateDb.createDb(database, configs),
+        MigrateDb.createUser(database, configs).pipe(
+          tap(ran => {
+            if (ran) {
+              MigrateDb.grantPermissions(database, configs);
+            }
+          })
+        ),
+        MigrateDb.createTables(database, configs)
+      ).pipe(
+        map(() => {
+          database.end();
+          return true;
+        }, catchError(err => new BehaviorSubject(false)))
+      );
+    } catch (e) {
+      throw new Error('Verifique sua conexão com o mysql');
+    }
   }
 
   private static createTables(
