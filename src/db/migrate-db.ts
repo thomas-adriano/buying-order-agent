@@ -94,20 +94,20 @@ export class MigrateDb {
     database: Database,
     configs: IServerConfigs
   ): Observable<boolean> {
-    const stmt = `CREATE DATABASE IF NOT EXISTS ${configs.appDatabase}
+    return database
+      .execute(
+        `CREATE DATABASE IF NOT EXISTS ${configs.appDatabase}
     CHARACTER SET utf8
-    COLLATE utf8_unicode_ci`;
-    console.log(`migration: preparing to execute ${stmt}`);
-    return database.execute(stmt).pipe(
-      map(() => {
-        console.log('migration: databse created');
-        return true;
-      }),
-      catchError(err => {
-        console.error('migration: error creating database');
-        return new BehaviorSubject(false);
-      })
-    );
+    COLLATE utf8_unicode_ci`
+      )
+      .pipe(
+        map(() => {
+          return true;
+        }),
+        catchError(err => {
+          return new BehaviorSubject(false);
+        })
+      );
   }
 
   private static createUser(

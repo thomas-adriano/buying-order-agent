@@ -18,6 +18,7 @@ export class Database {
       this.connected = true;
     }
 
+    console.log(`database: preparing to execute ${stmt}`);
     return Observable.create((observer: Observer<any>) => {
       try {
         this.connection.query(stmt, (error, results, fields) => {
@@ -25,10 +26,12 @@ export class Database {
             observer.error(error);
             return;
           }
+          console.log('database: stmt successfully executed');
           observer.next(results);
           observer.complete();
         });
       } catch (e) {
+        console.error('database: error executing sql stmt');
         observer.error(e);
       }
     });
