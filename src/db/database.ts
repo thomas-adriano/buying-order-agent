@@ -9,9 +9,10 @@ export class Database {
 
   public init(): void {
     this.connection = mysql.createConnection(this.cfg);
+    console.log('database: connection established');
   }
 
-  public execute(stmt: string): Observable<void> {
+  public execute(stmt: string): Observable<any> {
     if (!this.connected) {
       this.connection.connect();
       this.connected = true;

@@ -7,8 +7,8 @@
     "start": "node dist/app.js",
     "start-pm2": "pm2 start",
     "watch-pm2": "pm2 start --watch",
-    "build-ts": "tsc",
-    "watch-ts": "tsc -w",
+    "build-ts": "cp ./src/server.json ./dist/server.json && tsc",
+    "watch-ts": "cp ./src/server.json ./dist/server.json && tsc -w",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

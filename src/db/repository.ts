@@ -5,14 +5,15 @@ import { Database } from './database';
 import { Provider } from '../models/provider.model';
 import { Observable, BehaviorSubject, EMPTY } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { IServerConfigs } from '../http/http-server';
 
 export class Repository {
-  constructor(private db: Database) {}
+  constructor(private db: Database, private configs: IServerConfigs) {}
 
   public persistNotificationLog(
     provider: Provider,
     order: BuyingOrder,
-    configs: AppConfigs
+    emailFrom: string
   ): Observable<boolean> {
     if (
       !provider ||
@@ -21,7 +22,7 @@ export class Repository {
       !order.idContato ||
       !order.data ||
       !order.dataPrevista ||
-      !configs
+      !this.configs
     ) {
       return EMPTY;
     }
@@ -35,11 +36,13 @@ export class Repository {
       : emptyDate;
     return this.db
       .execute(
-        `INSERT INTO \`${configs.getAppDatabase()}\`.\`order-notification\` (timestamp,sent,providerEmail,employeeEmail,orderDate,estimatedOrderDate,providerId) VALUES (
+        `INSERT INTO \`${
+          this.configs.appDatabase
+        }\`.\`order-notification\` (timestamp,sent,providerEmail,employeeEmail,orderDate,estimatedOrderDate,providerId) VALUES (
               '${todayDate}',
               ${true},
               '${provider.email}',
-              '${configs.getAppEmailFrom()}',
+              '${emailFrom}',
               '${orderDate}',
               '${previewOrderDate}',
               ${order.idContato});`
@@ -52,6 +55,62 @@ export class Repository {
         catchError(err => {
           console.error('error trying to log notification into db', err);
           return new BehaviorSubject(false).asObservable();
+        })
+      );
+  }
+
+  public persistConfiguration(configs: AppConfigs): Observable<boolean> {
+    return this.db
+      .execute(
+        `INSERT INTO \`${
+          this.configs.appDatabase
+        }\`.\`configuration\` (appEmailName,appEmailUser,appEmailPassword,appSMTPAddress,appSMTPPort,appSMTPSecure,appEmailFrom,appEmailSubject,appEmailText,appEmailHtml,appServerHost,appServerPort,appCronPattern,appCronTimezone) VALUES (
+            '${configs.getAppEmailName()}',
+            '${configs.getAppEmailUser()}',
+            '${configs.getAppEmailPassword()}',
+            '${configs.getAppSMTPAddress()}',
+            ${configs.getAppSMTPPort()},
+            ${configs.getAppSMTPSecure()},
+            '${configs.getAppEmailFrom()}',
+            '${configs.getAppEmailSubject()}',
+            '${configs.getAppEmailText()}',
+            '${configs.getAppEmailHtml()}',
+            '${configs.getAppServerHost()}',
+            ${configs.getAppServerPort()},
+            '${configs.getAppCronPattern()}',
+            '${configs.getAppCronTimezone()};'`
+      )
+      .pipe(
+        map(() => {
+          console.log('notification logged into db');
+          return true;
+        }),
+        catchError(err => {
+          console.error('error trying to log notification into db', err);
+          return new BehaviorSubject(false).asObservable();
+        })
+      );
+  }
+
+  public getConfiguration(): Observable<AppConfigs> {
+    return this.db
+      .execute(
+        `SELECT * FROM \`${this.configs.appDatabase}\`.\`configuration\``
+      )
+      .pipe(
+        map(([res]) => {
+          console.log(res);
+          return new AppConfigs()
+            .setAppCronPattern(res.appCronPattern)
+            .setAppCronTimezone(res.appCronTimezone)
+            .setAppServerHost(res.appServerHost)
+            .setAppServerPort(res.appServerPort)
+            .setAppSMTPSecure(res.appSMTPSecure)
+            .setAppEmailName(res.appEmailName)
+            .setAppEmailUser(res.appEmailUser)
+            .setAppEmailSubject(res.appEmailSubject)
+            .setAppEmailPassword(res.appEmailPassword)
+            .setAppEmailFrom(res.appEmailFrom);
         })
       );
   }

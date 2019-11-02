@@ -1,21 +1,18 @@
 import { CronJob } from 'cron';
-import { Observable, BehaviorSubject, forkJoin } from 'rxjs';
-import { map, mergeMap, tap, catchError } from 'rxjs/operators';
+import * as fs from 'fs';
+import * as path from 'path';
+import { BehaviorSubject, forkJoin, Observable } from 'rxjs';
+import { catchError, map, mergeMap, tap } from 'rxjs/operators';
 import { AppConfigs } from './app-configs';
 import { Database } from './db/database';
 import { MigrateDb } from './db/migrate-db';
+import { Repository } from './db/repository';
 import { EmailSender } from './email/email-sender';
 import { ApiClient } from './http/api-client';
 import { HttpClient } from './http/http-client';
-import { Repository } from './db/repository';
-import { HttpServer } from './http/http-server';
+import { HttpServer, IServerConfigs } from './http/http-server';
 
 console.log('Buying Order Agent is starting...');
-const [jwtKey] = process.argv.slice(2);
-
-let cronJob: CronJob;
-const httpClient = new HttpClient(jwtKey, 'inspirehome.eccosys.com.br');
-const apiClient = new ApiClient(httpClient);
 
 process.on('message', msg => {
   if (msg === 'shutdown') {
@@ -27,53 +24,66 @@ process.on('SIGINT', () => {
   shutdown();
 });
 
-const configs = new AppConfigs()
-  .setDbAppUser('buyingorderagent')
-  .setDbRootUser('root')
-  .setDbRootPassword('pass')
-  .setDbHost('localhost')
-  .setAppDatabase('INSPIRE_HOME')
-  .setDbAppPassword('123')
-  .setAppCronPattern('0,5,10,15,20,25,30,35,40,45,50,55 * * * * *')
-  .setAppCronTimezone('America/Sao_Paulo')
-  .setAppServerHost('0.0.0.0')
-  .setAppServerPort(8888)
-  .setAppSMTPSecure(false)
-  .setAppEmailName('viola.von@ethereal.email')
-  .setAppEmailUser('viola.von@ethereal.email')
-  .setAppEmailSubject('Aviso de atraso')
-  .setAppEmailPassword('Q61Z2qsRsmg7nUEzNG')
-  .setAppEmailFrom('test@test.com');
+const [jwtKey] = process.argv.slice(2);
 
-const httpServer = new HttpServer(configs);
+let cronJob: CronJob;
+const httpClient = new HttpClient(jwtKey, 'inspirehome.eccosys.com.br');
+const apiClient = new ApiClient(httpClient);
+
+// const configs = new AppConfigs()
+
+//   .setAppCronPattern('0,5,10,15,20,25,30,35,40,45,50,55 * * * * *')
+//   .setAppCronTimezone('America/Sao_Paulo')
+//   .setAppServerHost('0.0.0.0')
+//   .setAppServerPort(8888)
+//   .setAppSMTPSecure(false)
+//   .setAppEmailName('viola.von@ethereal.email')
+//   .setAppEmailUser('viola.von@ethereal.email')
+//   .setAppEmailSubject('Aviso de atraso')
+//   .setAppEmailPassword('Q61Z2qsRsmg7nUEzNG')
+//   .setAppEmailFrom('test@test.com');
+
+const serverConfigs = loadServerConfigs();
 
 const db = new Database({
-  database: configs.getAppDatabase(),
-  host: configs.getDbHost(),
-  password: configs.getDbAppPassword(),
-  user: configs.getDbAppUser()
+  database: serverConfigs.appDatabase,
+  host: serverConfigs.dbHost,
+  password: serverConfigs.dbAppPassword,
+  user: serverConfigs.dbAppUser
+});
+const repository = new Repository(db, serverConfigs);
+
+const httpServer = new HttpServer(serverConfigs);
+
+MigrateDb.init(serverConfigs).subscribe(() => {
+  console.log('Database migration completed successfully!');
+  httpServer.startServer().subscribe(() => {
+    httpServer.configurationSaved().subscribe(configs => {
+      repository
+        .persistConfiguration(configs)
+        .subscribe(() => console.log('configurations saved to database'));
+    });
+
+    httpServer.agentRun().subscribe(() => {
+      repository.getConfiguration().subscribe(config => {
+        runOrdersVerification(config).subscribe(
+          () => {
+            console.log('orders verified');
+            startCron(config);
+          },
+          err => console.error(err)
+        );
+      });
+    });
+  });
 });
 
-MigrateDb.init(configs).subscribe(() => {
-  httpServer.startServer().subscribe(
-    () => {
-      console.log('Buying Order Agent server has started.');
-      // db.init();
-      // runOrdersVerification(db).subscribe(() => {});
-      // startCron();
-    },
-    err => {
-      console.error('server startup error', err);
-    }
-  );
-});
-
-function startCron(): void {
+function startCron(configs: AppConfigs): void {
   cronJob = new CronJob(
     configs.getAppCronPattern(),
     () => {
       console.log('Running Cron job');
-      runOrdersVerification(db).subscribe(
+      runOrdersVerification(configs).subscribe(
         () => {
           console.log('orders verified');
         },
@@ -88,8 +98,7 @@ function startCron(): void {
   cronJob.start();
 }
 
-function runOrdersVerification(db: Database): Observable<boolean> {
-  const repository = new Repository(db);
+function runOrdersVerification(configs: AppConfigs): Observable<boolean> {
   const emailSender = new EmailSender({
     host: configs.getAppSMTPAddress(),
     port: configs.getAppSMTPPort(),
@@ -108,7 +117,11 @@ function runOrdersVerification(db: Database): Observable<boolean> {
           tap(provider => {
             console.log(provider && provider.email);
             repository
-              .persistNotificationLog(provider, order, configs)
+              .persistNotificationLog(
+                provider,
+                order,
+                configs.getAppEmailFrom()
+              )
               .subscribe(persisted => {});
             // emailSender.sendEmail("viola.von@ethereal.email", configs);
           })
@@ -133,4 +146,13 @@ function shutdown(): void {
   if (httpServer) {
     httpServer.shutdown();
   }
+}
+
+function loadServerConfigs(): IServerConfigs {
+  const p = `${__dirname}${path.sep}server.json`;
+  console.log(`app: reading serverConfigs from ${p}`);
+  const fc = fs.readFileSync(p, 'utf8');
+  console.log(`app: serverConfigs file loaded ${fc}`);
+  const c = JSON.parse(fc) as IServerConfigs;
+  return c;
 }

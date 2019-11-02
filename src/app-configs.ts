@@ -1,11 +1,4 @@
 export class AppConfigs {
-  // db
-  private dbHost: string;
-  private dbRootUser: string;
-  private dbRootPassword: string;
-  private dbAppUser: string;
-  private dbAppPassword: string;
-  private appDatabase: string;
   // email
   private appEmailName: string;
   private appEmailUser: string;
@@ -38,60 +31,6 @@ export class AppConfigs {
 
   public setAppServerPort(appServerPort: number): AppConfigs {
     this.appServerPort = appServerPort;
-    return this;
-  }
-
-  public getDbHost(): string {
-    return this.dbHost;
-  }
-
-  public setDbHost(dbHost: string): AppConfigs {
-    this.dbHost = dbHost;
-    return this;
-  }
-
-  public getDbRootUser(): string {
-    return this.dbRootUser;
-  }
-
-  public setDbRootUser(dbRootUser: string): AppConfigs {
-    this.dbRootUser = dbRootUser;
-    return this;
-  }
-
-  public getDbRootPassword(): string {
-    return this.dbRootPassword;
-  }
-
-  public setDbRootPassword(dbRootPassword: string): AppConfigs {
-    this.dbRootPassword = dbRootPassword;
-    return this;
-  }
-
-  public getDbAppUser(): string {
-    return this.dbAppUser;
-  }
-
-  public setDbAppUser(dbAppUser: string): AppConfigs {
-    this.dbAppUser = dbAppUser;
-    return this;
-  }
-
-  public getDbAppPassword(): string {
-    return this.dbAppPassword;
-  }
-
-  public setDbAppPassword(appDbPassword: string): AppConfigs {
-    this.dbAppPassword = appDbPassword;
-    return this;
-  }
-
-  public getAppDatabase(): string {
-    return this.appDatabase;
-  }
-
-  public setAppDatabase(appDatabase: string): AppConfigs {
-    this.appDatabase = appDatabase;
     return this;
   }
 
