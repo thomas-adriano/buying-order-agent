@@ -49,11 +49,14 @@ export class Repository {
       )
       .pipe(
         map(() => {
-          console.log('notification logged into db');
+          console.log('repository: notification logged into db');
           return true;
         }),
         catchError(err => {
-          console.error('error trying to log notification into db', err);
+          console.error(
+            'repository: error trying to log notification into db',
+            err
+          );
           return new BehaviorSubject(false).asObservable();
         })
       );
@@ -82,11 +85,14 @@ export class Repository {
       )
       .pipe(
         map(() => {
-          console.log('notification logged into db');
+          console.log('repository: notification logged into db');
           return true;
         }),
         catchError(err => {
-          console.error('error trying to log notification into db', err);
+          console.error(
+            'repository: error trying to log notification into db',
+            err
+          );
           return new BehaviorSubject(false).asObservable();
         })
       );
@@ -95,7 +101,7 @@ export class Repository {
   public getConfiguration(): Observable<AppConfigs> {
     return this.db
       .execute(
-        `SELECT * FROM \`${this.configs.appDatabase}\`.\`configuration\``
+        `SELECT * FROM \`${this.configs.appDatabase}\`.\`configuration\` ORDER BY ID DESC LIMIT 1`
       )
       .pipe(
         map(([res]) => {

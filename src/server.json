@@ -2,9 +2,9 @@
     "appHost": "0.0.0.0",
     "appPort": 8888,
     "dbAppUser": "buyingorderagent",
+    "dbAppPassword": "123",
     "dbRootUser": "root",
     "dbRootPassword": "pass",
     "dbHost": "localhost",
-    "appDatabase": "INSPIRE_HOME",
-    "dbAppPassword": "123"
+    "appDatabase": "INSPIRE_HOME"
 }

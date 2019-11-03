@@ -8,7 +8,6 @@ export class ApiClient {
   constructor(private httpClient: HttpClient) {}
 
   public fetchBuyingOrders(): Observable<BuyingOrder[]> {
-    console.log('fetchBuyingOrders()');
     const resource = `/api/ordens-de-compra`;
     return this.httpClient.get(`${resource}`).pipe(
       map((json: any[]) => {
@@ -21,7 +20,6 @@ export class ApiClient {
   }
 
   public fetchProviderById(id: string | undefined): Observable<Provider> {
-    console.log('fetchProviderById()');
     if (!id) {
       return EMPTY;
     }

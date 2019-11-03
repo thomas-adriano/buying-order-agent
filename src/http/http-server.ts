@@ -24,24 +24,17 @@ export class HttpServer {
   public startServer(): Observable<void> {
     this.server = http.createServer((req, res) => {
       const pathName = url.parse(req.url as any).pathname;
-
-      console.log('req', req.method);
       if (req.method === 'OPTIONS') {
-        res.writeHead(200, {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': req.headers.origin,
-          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, DELETE',
-          'Access-Control-Allow-Headers': 'content-type'
-        });
+        this.writeResponseHeaders(req, res);
         res.end();
       }
       if (req.method === 'POST') {
+        this.writeResponseHeaders(req, res);
         if (pathName === '/configuration') {
-          console.log('Configurations saved');
+          console.log('http-server: configurations saved');
           const body = this.parseBody(req);
           req.on('end', () => {
             const json = JSON.parse(body);
-            res.writeHead(200, { 'Content-Type': 'application/json' });
             res.write(
               JSON.stringify({
                 status: 200,
@@ -66,17 +59,39 @@ export class HttpServer {
       }
 
       if (req.method === 'GET') {
+        this.writeResponseHeaders(req, res);
         if (pathName === '/start-agent') {
           this.agentRunSubject.next();
+          res.write(
+            JSON.stringify({
+              status: 200,
+              msg: 'agent started'
+            })
+          );
+          res.end();
+        }
+
+        if (pathName === '/status') {
+          res.write(
+            JSON.stringify({
+              status: 200,
+              msg: 'running'
+            })
+          );
+          res.end();
         }
       }
     });
 
     return Observable.create((observer: Observer<any>) => {
       this.server.listen(this.configs.appPort, this.configs.appHost, () => {
+        console.log('http-server: started');
         observer.next(0);
       });
-      this.server.on('error', err => observer.error(err));
+      this.server.on('error', err => {
+        observer.error(err);
+        console.error('http-server: error');
+      });
     });
   }
 
@@ -100,5 +115,17 @@ export class HttpServer {
       body += chunk;
     });
     return body;
+  }
+
+  private writeResponseHeaders(
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): void {
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': req.headers.origin,
+      'Access-Control-Allow-Methods': 'POST, PUT, GET, OPTIONS, DELETE',
+      'Access-Control-Allow-Headers': 'content-type'
+    });
   }
 }

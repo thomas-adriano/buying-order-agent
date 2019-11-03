@@ -3,21 +3,19 @@ import { Observable, Observer } from 'rxjs';
 
 export class Database {
   private connection: mysql.Connection;
-  private connected = false;
 
   constructor(private cfg: mysql.ConnectionConfig) {}
 
   public init(): void {
     this.connection = mysql.createConnection(this.cfg);
+    this.connection.connect();
+    this.connection.on('end', () => {
+      console.log('database: connection end');
+    });
     console.log('database: connection established');
   }
 
   public execute(stmt: string): Observable<any> {
-    if (!this.connected) {
-      this.connection.connect();
-      this.connected = true;
-    }
-
     console.log(`database: preparing to execute ${stmt}`);
     return Observable.create((observer: Observer<any>) => {
       try {
