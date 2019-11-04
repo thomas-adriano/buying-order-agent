@@ -1,5 +1,5 @@
-import { BehaviorSubject, forkJoin, Observable, zip } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { BehaviorSubject, forkJoin, Observable, zip, of } from 'rxjs';
+import { catchError, map, tap, mergeMap } from 'rxjs/operators';
 import { IServerConfigs } from '../http/http-server';
 import { Database } from './database';
 
@@ -11,22 +11,10 @@ export class MigrateDb {
     return zip(
       this.createDb(),
       this.createTables(),
-      this.createUser().pipe(
-        tap(ran => {
-          if (ran) {
-            this.grantPermissions();
-          }
-        })
-      )
+      this.createUser().pipe(mergeMap(ran => this.grantPermissions()))
     ).pipe(
-      map(
-        ([...res]) => {
-          // retorna false se achar algum false
-          return !res.find(r => !r);
-        },
-        catchError(err => {
-          return new BehaviorSubject(false);
-        })
+      tap(() =>
+        console.log('migration: database migration completed successfully!')
       )
     );
   }
@@ -66,7 +54,8 @@ export class MigrateDb {
             \`appServerHost\` VARCHAR(128),
             \`appServerPort\` INT,
             \`appCronPattern\` VARCHAR(128),
-            \`appCronTimezone\` VARCHAR(128)
+            \`appCronTimezone\` VARCHAR(128),
+            \`appNotificationTriggerDelta\` INT
           )
           ENGINE = InnoDB;`
           )
@@ -77,50 +66,23 @@ export class MigrateDb {
     }
   }
 
-  private createDb(): Observable<boolean> {
-    return this.db
-      .execute(
-        `CREATE DATABASE IF NOT EXISTS ${this.configs.appDatabase}
+  private createDb(): Observable<void> {
+    return this.db.execute(
+      `CREATE DATABASE IF NOT EXISTS ${this.configs.appDatabase}
           CHARACTER SET utf8
           COLLATE utf8_unicode_ci`
-      )
-      .pipe(
-        map(() => {
-          return true;
-        }),
-        catchError(err => {
-          return new BehaviorSubject(false);
-        })
-      );
+    );
   }
 
-  private createUser(): Observable<boolean> {
-    return this.db
-      .execute(
-        `CREATE USER IF NOT EXISTS '${this.configs.dbAppUser}' IDENTIFIED BY '${this.configs.dbAppPassword}'`
-      )
-      .pipe(
-        map(() => {
-          return true;
-        }),
-        catchError(err => {
-          return new BehaviorSubject(false);
-        })
-      );
+  private createUser(): Observable<void> {
+    return this.db.execute(
+      `CREATE USER IF NOT EXISTS '${this.configs.dbAppUser}' IDENTIFIED BY '${this.configs.dbAppPassword}'`
+    );
   }
 
-  private grantPermissions(): Observable<boolean> {
-    return this.db
-      .execute(
-        `GRANT ALL ON ${this.configs.appDatabase}.* TO '${this.configs.dbAppUser}'`
-      )
-      .pipe(
-        map(() => {
-          return true;
-        }),
-        catchError(err => {
-          return new BehaviorSubject(false);
-        })
-      );
+  private grantPermissions(): Observable<void> {
+    return this.db.execute(
+      `GRANT ALL ON ${this.configs.appDatabase}.* TO '${this.configs.dbAppUser}'`
+    );
   }
 }

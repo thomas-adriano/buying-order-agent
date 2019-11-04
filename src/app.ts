@@ -1,4 +1,6 @@
 import * as fs from 'fs';
+import moment from 'moment';
+import 'moment/locale/pt-br';
 import * as path from 'path';
 import { BehaviorSubject, forkJoin, Observable } from 'rxjs';
 import { catchError, map, mergeMap, tap } from 'rxjs/operators';
@@ -27,8 +29,6 @@ process.on('SIGINT', () => {
   shutdown();
 });
 
-const [jwtKey] = process.argv.slice(2);
-
 // const configs = new AppConfigs()
 
 //   .setAppCronPattern('0,5,10,15,20,25,30,35,40,45,50,55 * * * * *')
@@ -48,9 +48,9 @@ const statusHandler = new AppStatusHandler(websocketServer);
 statusHandler.init();
 statusHandler.changeStatus(Statuses.INITIALIZING);
 
-const httpClient = new HttpClient(jwtKey, 'inspirehome.eccosys.com.br');
-const apiClient = new ApiClient(httpClient);
 const serverConfigs = loadServerConfigs();
+const httpClient = new HttpClient(serverConfigs.apiJwt, serverConfigs.apiUrl);
+const apiClient = new ApiClient(httpClient);
 const appDb = new Database({
   database: serverConfigs.appDatabase,
   host: serverConfigs.dbHost,
@@ -71,14 +71,15 @@ rootDb.init();
 migrator.init().subscribe(
   () => {
     rootDb.end();
-    console.log('Database migration completed successfully!');
     httpServer.startServer().subscribe(() => {
       statusHandler.changeStatus(Statuses.SERVER_RUNNING);
       httpServer.configurationSaved().subscribe(configs => {
         appDb.init();
         repository
           .persistConfiguration(configs)
-          .subscribe(() => console.log('configurations saved to database'));
+          .subscribe(() =>
+            console.log('app: configurations saved to database')
+          );
         appDb.end();
       });
 
@@ -101,6 +102,8 @@ migrator.init().subscribe(
     });
   },
   err => {
+    console.error('app: an error occurred while executing migrateDb');
+    console.error(err);
     rootDb.end();
   }
 );
@@ -128,8 +131,20 @@ function runOrdersVerification(configs: AppConfigs): Observable<boolean> {
       pass: configs.getAppEmailPassword() // generated ethereal password
     }
   });
-
+  const today: moment.Moment = moment();
   return apiClient.fetchBuyingOrders().pipe(
+    map(orders => {
+      const delta = configs.getAppNotificationTriggerDelta();
+      return orders.filter(o => {
+        if (!o.data) {
+          return false;
+        }
+        const orderDate = moment(o.data, 'DD-MM-YYYY');
+        const diff = today.diff(orderDate, 'days');
+        console.log(diff);
+        return diff > delta;
+      });
+    }),
     mergeMap(orders => {
       appDb.init();
       const observables = orders.map((order, i) => {
@@ -173,6 +188,9 @@ function shutdown(): void {
   }
   if (httpServer) {
     httpServer.shutdown();
+  }
+  if (websocketServer) {
+    websocketServer.close();
   }
 }
 

@@ -3,10 +3,10 @@ import * as WebSocket from 'ws';
 export class WebsocketServer {
   private conectedClient: WebSocket;
   private buffer: string[] = [];
-
+  private wss: WebSocket.Server;
   public init(): void {
-    const wss = new WebSocket.Server({ port: 8989 });
-    wss.on('connection', ws => {
+    this.wss = new WebSocket.Server({ port: 8989 });
+    this.wss.on('connection', ws => {
       console.log('websocket: connection received');
       if (this.conectedClient) {
         this.conectedClient.close();
@@ -17,7 +17,7 @@ export class WebsocketServer {
       });
       this.sendBuffer();
     });
-    wss.on('error', err => {
+    this.wss.on('error', err => {
       console.log('websocket: error', err);
     });
   }
@@ -30,6 +30,10 @@ export class WebsocketServer {
     } else {
       this.buffer.push(s);
     }
+  }
+
+  public close(): void {
+    this.wss.close();
   }
 
   private sendBuffer(): void {

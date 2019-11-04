@@ -1,8 +1,8 @@
-import * as nodemailer from "nodemailer";
-import SMTPTransport = require("nodemailer/lib/smtp-transport");
-import Mail = require("nodemailer/lib/mailer");
-import { Observable, from } from "rxjs";
-import { AppConfigs } from "../app-configs";
+import * as nodemailer from 'nodemailer';
+import SMTPTransport = require('nodemailer/lib/smtp-transport');
+import Mail = require('nodemailer/lib/mailer');
+import { Observable, from } from 'rxjs';
+import { AppConfigs } from '../app-configs';
 
 export class EmailSender {
   constructor(private transportConfigs: SMTPTransport.Options) {}

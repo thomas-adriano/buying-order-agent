@@ -12,11 +12,14 @@ export interface IServerConfigs {
   dbHost: string;
   appDatabase: string;
   dbAppPassword: string;
+  apiUrl: string;
+  apiJwt: string;
 }
 
 export class HttpServer {
   private server: http.Server;
   private agentRunSubject = new Subject<void>();
+  private agentStopSubject = new Subject<void>();
   private configSavedSubject = new Subject<AppConfigs>();
 
   constructor(private configs: IServerConfigs) {}
@@ -29,10 +32,13 @@ export class HttpServer {
         res.end();
       }
       if (req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => {
+          body += chunk;
+        });
         this.writeResponseHeaders(req, res);
         if (pathName === '/configuration') {
           console.log('http-server: configurations saved');
-          const body = this.parseBody(req);
           req.on('end', () => {
             const json = JSON.parse(body);
             res.write(
@@ -47,12 +53,17 @@ export class HttpServer {
               .setAppCronTimezone(json.appCronTimezone)
               .setAppServerHost(json.appServerHost)
               .setAppServerPort(json.appServerPort)
+              .setAppSMTPAddress(json.appSMTPAddress)
+              .setAppSMTPPort(json.appSMTPPort)
               .setAppSMTPSecure(json.appSMTPSecure)
               .setAppEmailName(json.appEmailName)
               .setAppEmailUser(json.appEmailUser)
               .setAppEmailSubject(json.appEmailSubject)
               .setAppEmailPassword(json.appEmailPassword)
-              .setAppEmailFrom(json.appEmailFrom);
+              .setAppEmailFrom(json.appEmailFrom)
+              .setAppEmailText(json.appEmailText)
+              .setAppEmailHtml(json.appEmailHtml)
+              .setAppNotificationTriggerDelta(json.appNotificationTriggerDelta);
             this.configSavedSubject.next(c);
           });
         }
@@ -71,6 +82,17 @@ export class HttpServer {
           res.end();
         }
 
+        if (pathName === '/stop-agent') {
+          this.agentStopSubject.next();
+          res.write(
+            JSON.stringify({
+              status: 200,
+              msg: 'agent stopped'
+            })
+          );
+          res.end();
+        }
+
         if (pathName === '/status') {
           res.write(
             JSON.stringify({
@@ -84,6 +106,7 @@ export class HttpServer {
     });
 
     return Observable.create((observer: Observer<any>) => {
+      console.log('http-server: initializing');
       this.server.listen(this.configs.appPort, this.configs.appHost, () => {
         console.log('http-server: started');
         observer.next(0);
@@ -99,6 +122,10 @@ export class HttpServer {
     return this.agentRunSubject.asObservable();
   }
 
+  public agentStop(): Observable<void> {
+    return this.agentStopSubject.asObservable();
+  }
+
   public configurationSaved(): Observable<AppConfigs> {
     return this.configSavedSubject.asObservable();
   }
@@ -107,14 +134,6 @@ export class HttpServer {
     if (this.server) {
       this.server.close();
     }
-  }
-
-  private parseBody(req: http.IncomingMessage): string {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk;
-    });
-    return body;
   }
 
   private writeResponseHeaders(

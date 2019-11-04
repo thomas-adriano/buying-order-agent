@@ -15,6 +15,7 @@ export class AppConfigs {
   // cron
   private appCronPattern = '0,5,10,15,20,25,30,35,40,45,50,55 * * * * *';
   private appCronTimezone = 'America/Sao_Paulo';
+  private appNotificationTriggerDelta = 7;
 
   public getAppServerHost(): string {
     return this.appServerHost;
@@ -139,6 +140,17 @@ export class AppConfigs {
 
   public setAppCronTimezone(appCronTimezone: string): AppConfigs {
     this.appCronTimezone = appCronTimezone;
+    return this;
+  }
+
+  public getAppNotificationTriggerDelta(): number {
+    return this.appNotificationTriggerDelta;
+  }
+
+  public setAppNotificationTriggerDelta(
+    appNotificationTriggerDelta: number
+  ): AppConfigs {
+    this.appNotificationTriggerDelta = appNotificationTriggerDelta;
     return this;
   }
 }

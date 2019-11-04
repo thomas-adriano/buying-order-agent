@@ -16,9 +16,9 @@ export class Database {
   }
 
   public execute(stmt: string): Observable<any> {
-    console.log(`database: preparing to execute ${stmt}`);
     return Observable.create((observer: Observer<any>) => {
       try {
+        console.log(`database: preparing to execute ${stmt}`);
         this.connection.query(stmt, (error, results, fields) => {
           if (error) {
             observer.error(error);

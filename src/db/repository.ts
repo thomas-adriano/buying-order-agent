@@ -1,11 +1,11 @@
 import moment from 'moment';
-import { AppConfigs } from '../app-configs';
-import { BuyingOrder } from '../models/buying-order.model';
-import { Database } from './database';
-import { Provider } from '../models/provider.model';
-import { Observable, BehaviorSubject, EMPTY } from 'rxjs';
+import { BehaviorSubject, EMPTY, Observable } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { AppConfigs } from '../app-configs';
 import { IServerConfigs } from '../http/http-server';
+import { BuyingOrder } from '../models/buying-order.model';
+import { Provider } from '../models/provider.model';
+import { Database } from './database';
 
 export class Repository {
   constructor(private db: Database, private configs: IServerConfigs) {}
@@ -65,23 +65,42 @@ export class Repository {
   public persistConfiguration(configs: AppConfigs): Observable<boolean> {
     return this.db
       .execute(
-        `INSERT INTO \`${
-          this.configs.appDatabase
-        }\`.\`configuration\` (appEmailName,appEmailUser,appEmailPassword,appSMTPAddress,appSMTPPort,appSMTPSecure,appEmailFrom,appEmailSubject,appEmailText,appEmailHtml,appServerHost,appServerPort,appCronPattern,appCronTimezone) VALUES (
-            '${configs.getAppEmailName()}',
-            '${configs.getAppEmailUser()}',
-            '${configs.getAppEmailPassword()}',
-            '${configs.getAppSMTPAddress()}',
-            ${configs.getAppSMTPPort()},
-            ${configs.getAppSMTPSecure()},
-            '${configs.getAppEmailFrom()}',
-            '${configs.getAppEmailSubject()}',
-            '${configs.getAppEmailText()}',
-            '${configs.getAppEmailHtml()}',
-            '${configs.getAppServerHost()}',
-            ${configs.getAppServerPort()},
-            '${configs.getAppCronPattern()}',
-            '${configs.getAppCronTimezone()};'`
+        `INSERT INTO \`${this.configs.appDatabase}\`.\`configuration\`
+              (
+                appEmailName,
+                appEmailUser,
+                appEmailPassword,
+                appSMTPAddress,
+                appSMTPPort,
+                appSMTPSecure,
+                appEmailFrom,
+                appEmailSubject,
+                appEmailText,
+                appEmailHtml,
+                appServerHost,
+                appServerPort,
+                appCronPattern,
+                appCronTimezone,
+                appNotificationTriggerDelta
+              )
+                VALUES
+              (
+                '${configs.getAppEmailName()}',
+                '${configs.getAppEmailUser()}',
+                '${configs.getAppEmailPassword()}',
+                '${configs.getAppSMTPAddress()}',
+                ${configs.getAppSMTPPort()},
+                ${configs.getAppSMTPSecure()},
+                '${configs.getAppEmailFrom()}',
+                '${configs.getAppEmailSubject()}',
+                '${configs.getAppEmailText()}',
+                '${configs.getAppEmailHtml()}',
+                '${configs.getAppServerHost()}',
+                ${configs.getAppServerPort()},
+                '${configs.getAppCronPattern()}',
+                '${configs.getAppCronTimezone()}',
+                '${configs.getAppNotificationTriggerDelta()}'
+              );`
       )
       .pipe(
         map(() => {
@@ -105,7 +124,6 @@ export class Repository {
       )
       .pipe(
         map(([res]) => {
-          console.log(res);
           return new AppConfigs()
             .setAppCronPattern(res.appCronPattern)
             .setAppCronTimezone(res.appCronTimezone)
@@ -116,7 +134,8 @@ export class Repository {
             .setAppEmailUser(res.appEmailUser)
             .setAppEmailSubject(res.appEmailSubject)
             .setAppEmailPassword(res.appEmailPassword)
-            .setAppEmailFrom(res.appEmailFrom);
+            .setAppEmailFrom(res.appEmailFrom)
+            .setAppNotificationTriggerDelta(res.appNotificationTriggerDelta);
         })
       );
   }
