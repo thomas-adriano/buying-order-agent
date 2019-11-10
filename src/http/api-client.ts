@@ -1,8 +1,8 @@
+import { BehaviorSubject, EMPTY, Observable, throwError } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { BuyingOrder } from '../models/buying-order.model';
-import { HttpClient } from './http-client';
-import { Observable, throwError, EMPTY, BehaviorSubject } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
 import { Provider } from '../models/provider.model';
+import { HttpClient } from './http-client';
 
 export class ApiClient {
   constructor(private httpClient: HttpClient) {}

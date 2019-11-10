@@ -2,6 +2,8 @@ import * as http from 'http';
 import { Observable, Observer, Subject } from 'rxjs';
 import * as url from 'url';
 import { AppConfigs } from '../app-configs';
+import { Repository } from '../db/repository';
+import { AppStatusHandler } from '../websocket/app-status-handler';
 
 export interface IServerConfigs {
   appHost: string;
@@ -22,7 +24,10 @@ export class HttpServer {
   private agentStopSubject = new Subject<void>();
   private configSavedSubject = new Subject<AppConfigs>();
 
-  constructor(private configs: IServerConfigs) {}
+  constructor(
+    private configs: IServerConfigs,
+    private repository: Repository
+  ) {}
 
   public startServer(): Observable<void> {
     this.server = http.createServer((req, res) => {
@@ -51,8 +56,6 @@ export class HttpServer {
             const c = new AppConfigs()
               .setAppCronPattern(json.appCronPattern)
               .setAppCronTimezone(json.appCronTimezone)
-              .setAppServerHost(json.appServerHost)
-              .setAppServerPort(json.appServerPort)
               .setAppSMTPAddress(json.appSMTPAddress)
               .setAppSMTPPort(json.appSMTPPort)
               .setAppSMTPSecure(json.appSMTPSecure)
@@ -71,6 +74,16 @@ export class HttpServer {
 
       if (req.method === 'GET') {
         this.writeResponseHeaders(req, res);
+
+        if (pathName === '/configuration') {
+          this.repository.begin();
+          this.repository.getConfiguration().subscribe(configs => {
+            res.write(JSON.stringify(configs));
+            res.end();
+            this.repository.end();
+          });
+        }
+
         if (pathName === '/start-agent') {
           this.agentRunSubject.next();
           res.write(

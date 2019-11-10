@@ -2,8 +2,9 @@ import * as WebSocket from 'ws';
 
 export class WebsocketServer {
   private conectedClient: WebSocket;
-  private buffer: string[] = [];
+  private lastStatus: string;
   private wss: WebSocket.Server;
+
   public init(): void {
     this.wss = new WebSocket.Server({ port: 8989 });
     this.wss.on('connection', ws => {
@@ -28,7 +29,7 @@ export class WebsocketServer {
       console.log('websocket: ', s);
       this.conectedClient.send(s);
     } else {
-      this.buffer.push(s);
+      this.lastStatus = s;
     }
   }
 
@@ -37,8 +38,8 @@ export class WebsocketServer {
   }
 
   private sendBuffer(): void {
-    if (this.buffer.length) {
-      this.buffer.forEach(m => this.conectedClient.send(m));
+    if (this.lastStatus) {
+      this.conectedClient.send(this.lastStatus);
     }
   }
 }

@@ -10,30 +10,10 @@ export class AppConfigs {
   private appEmailSubject: string;
   private appEmailText: string;
   private appEmailHtml: string;
-  private appServerHost: string;
-  private appServerPort: number;
   // cron
   private appCronPattern = '0,5,10,15,20,25,30,35,40,45,50,55 * * * * *';
   private appCronTimezone = 'America/Sao_Paulo';
   private appNotificationTriggerDelta = 7;
-
-  public getAppServerHost(): string {
-    return this.appServerHost;
-  }
-
-  public setAppServerHost(appServerHost: string): AppConfigs {
-    this.appServerHost = appServerHost;
-    return this;
-  }
-
-  public getAppServerPort(): number {
-    return this.appServerPort;
-  }
-
-  public setAppServerPort(appServerPort: number): AppConfigs {
-    this.appServerPort = appServerPort;
-    return this;
-  }
 
   public getAppEmailName(): string {
     return this.appEmailName;

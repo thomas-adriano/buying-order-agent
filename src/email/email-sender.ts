@@ -3,6 +3,7 @@ import SMTPTransport = require('nodemailer/lib/smtp-transport');
 import Mail = require('nodemailer/lib/mailer');
 import { Observable, from } from 'rxjs';
 import { AppConfigs } from '../app-configs';
+import { tap } from 'rxjs/operators';
 
 export class EmailSender {
   constructor(private transportConfigs: SMTPTransport.Options) {}
@@ -19,8 +20,12 @@ export class EmailSender {
 
   private doSendEmail(emailConfigs: Mail.Options): Observable<any> {
     // create reusable transporter object using the default SMTP transport
-    let transporter = nodemailer.createTransport(this.transportConfigs);
+    const transporter = nodemailer.createTransport(this.transportConfigs);
     // Preview URL: https://ethereal.email/message/WaQKMgKddxQDoou...
-    return from(transporter.sendMail(emailConfigs));
+    return from(transporter.sendMail(emailConfigs)).pipe(
+      tap(() =>
+        console.log(`email-sender: sending e-mail to ${emailConfigs.to}`)
+      )
+    );
   }
 }

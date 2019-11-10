@@ -10,10 +10,19 @@ import { Database } from './database';
 export class Repository {
   constructor(private db: Database, private configs: IServerConfigs) {}
 
+  public begin(): void {
+    this.db.init();
+  }
+
+  public end(): void {
+    this.db.end();
+  }
+
   public persistNotificationLog(
     provider: Provider,
     order: BuyingOrder,
-    emailFrom: string
+    emailFrom: string,
+    sent = true
   ): Observable<boolean> {
     if (
       !provider ||
@@ -36,11 +45,9 @@ export class Repository {
       : emptyDate;
     return this.db
       .execute(
-        `INSERT INTO \`${
-          this.configs.appDatabase
-        }\`.\`order-notification\` (timestamp,sent,providerEmail,employeeEmail,orderDate,estimatedOrderDate,providerId) VALUES (
+        `INSERT INTO \`${this.configs.appDatabase}\`.\`order-notification\` (timestamp,sent,providerEmail,employeeEmail,orderDate,estimatedOrderDate,providerId) VALUES (
               '${todayDate}',
-              ${true},
+              ${sent},
               '${provider.email}',
               '${emailFrom}',
               '${orderDate}',
@@ -77,8 +84,6 @@ export class Repository {
                 appEmailSubject,
                 appEmailText,
                 appEmailHtml,
-                appServerHost,
-                appServerPort,
                 appCronPattern,
                 appCronTimezone,
                 appNotificationTriggerDelta
@@ -95,8 +100,6 @@ export class Repository {
                 '${configs.getAppEmailSubject()}',
                 '${configs.getAppEmailText()}',
                 '${configs.getAppEmailHtml()}',
-                '${configs.getAppServerHost()}',
-                ${configs.getAppServerPort()},
                 '${configs.getAppCronPattern()}',
                 '${configs.getAppCronTimezone()}',
                 '${configs.getAppNotificationTriggerDelta()}'
@@ -124,18 +127,23 @@ export class Repository {
       )
       .pipe(
         map(([res]) => {
-          return new AppConfigs()
-            .setAppCronPattern(res.appCronPattern)
-            .setAppCronTimezone(res.appCronTimezone)
-            .setAppServerHost(res.appServerHost)
-            .setAppServerPort(res.appServerPort)
-            .setAppSMTPSecure(res.appSMTPSecure)
-            .setAppEmailName(res.appEmailName)
-            .setAppEmailUser(res.appEmailUser)
-            .setAppEmailSubject(res.appEmailSubject)
-            .setAppEmailPassword(res.appEmailPassword)
-            .setAppEmailFrom(res.appEmailFrom)
-            .setAppNotificationTriggerDelta(res.appNotificationTriggerDelta);
+          if (res) {
+            return new AppConfigs()
+              .setAppCronPattern(res.appCronPattern)
+              .setAppCronTimezone(res.appCronTimezone)
+              .setAppSMTPSecure(res.appSMTPSecure)
+              .setAppSMTPAddress(res.appSMTPAddress)
+              .setAppSMTPPort(res.appSMTPPort)
+              .setAppEmailName(res.appEmailName)
+              .setAppEmailUser(res.appEmailUser)
+              .setAppEmailText(res.appEmailText)
+              .setAppEmailSubject(res.appEmailSubject)
+              .setAppEmailPassword(res.appEmailPassword)
+              .setAppEmailFrom(res.appEmailFrom)
+              .setAppNotificationTriggerDelta(res.appNotificationTriggerDelta);
+          } else {
+            return new AppConfigs();
+          }
         })
       );
   }

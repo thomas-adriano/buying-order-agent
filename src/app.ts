@@ -16,6 +16,7 @@ import { HttpServer, IServerConfigs } from './http/http-server';
 import { AppStatusHandler } from './websocket/app-status-handler';
 import { Statuses } from './websocket/statuses';
 import { WebsocketServer } from './websocket/websocket-server';
+import { NotificationScheduler } from './notification-scheduler';
 
 console.log('app: buying-order-agent is starting...');
 
@@ -28,19 +29,6 @@ process.on('message', msg => {
 process.on('SIGINT', () => {
   shutdown();
 });
-
-// const configs = new AppConfigs()
-
-//   .setAppCronPattern('0,5,10,15,20,25,30,35,40,45,50,55 * * * * *')
-//   .setAppCronTimezone('America/Sao_Paulo')
-//   .setAppServerHost('0.0.0.0')
-//   .setAppServerPort(8888)
-//   .setAppSMTPSecure(false)
-//   .setAppEmailName('viola.von@ethereal.email')
-//   .setAppEmailUser('viola.von@ethereal.email')
-//   .setAppEmailSubject('Aviso de atraso')
-//   .setAppEmailPassword('Q61Z2qsRsmg7nUEzNG')
-//   .setAppEmailFrom('test@test.com');
 
 const websocketServer = new WebsocketServer();
 const statusHandler = new AppStatusHandler(websocketServer);
@@ -64,17 +52,17 @@ const rootDb = new Database({
 });
 const repository = new Repository(appDb, serverConfigs);
 const migrator = new MigrateDb(serverConfigs, rootDb);
-const httpServer = new HttpServer(serverConfigs);
-let cron: Cron;
+const httpServer = new HttpServer(serverConfigs, repository);
+let notificationShceduler: NotificationScheduler;
 
 rootDb.init();
 migrator.init().subscribe(
   () => {
-    rootDb.end();
+    repository.end();
     httpServer.startServer().subscribe(() => {
       statusHandler.changeStatus(Statuses.SERVER_RUNNING);
       httpServer.configurationSaved().subscribe(configs => {
-        appDb.init();
+        repository.begin();
         repository
           .persistConfiguration(configs)
           .subscribe(() =>
@@ -84,98 +72,44 @@ migrator.init().subscribe(
       });
 
       httpServer.agentRun().subscribe(() => {
-        appDb.init();
+        console.log(`app: running scheduler`);
+        repository.begin();
         repository.getConfiguration().subscribe(config => {
           appDb.end();
-          runOrdersVerification(config).subscribe(
+          if (!notificationShceduler) {
+            const cron = new Cron(config);
+            notificationShceduler = new NotificationScheduler(
+              config,
+              cron,
+              apiClient,
+              repository
+            );
+          }
+          notificationShceduler.start().subscribe(
             () => {
               console.log('orders verified');
-              cron = startCron(config);
               statusHandler.changeStatus(Statuses.SCHEDULER_RUNNING);
             },
             err => {
               console.error(err);
+              statusHandler.changeStatus(Statuses.SCHEDULER_ERROR);
             }
           );
         });
+      });
+
+      httpServer.agentStop().subscribe(() => {
+        statusHandler.changeStatus(Statuses.SERVER_RUNNING);
+        notificationShceduler.stop();
       });
     });
   },
   err => {
     console.error('app: an error occurred while executing migrateDb');
     console.error(err);
-    rootDb.end();
+    repository.end();
   }
 );
-
-function startCron(configs: AppConfigs): Cron {
-  const cron = new Cron(configs);
-  cron.start().subscribe(() => {
-    runOrdersVerification(configs).subscribe(
-      () => {
-        console.log('orders verified');
-      },
-      err => console.error(err)
-    );
-  });
-  return cron;
-}
-
-function runOrdersVerification(configs: AppConfigs): Observable<boolean> {
-  const emailSender = new EmailSender({
-    host: configs.getAppSMTPAddress(),
-    port: configs.getAppSMTPPort(),
-    secure: configs.getAppSMTPSecure(), // true for 465, false for other ports
-    auth: {
-      user: configs.getAppEmailUser(), // generated ethereal user
-      pass: configs.getAppEmailPassword() // generated ethereal password
-    }
-  });
-  const today: moment.Moment = moment();
-  return apiClient.fetchBuyingOrders().pipe(
-    map(orders => {
-      const delta = configs.getAppNotificationTriggerDelta();
-      return orders.filter(o => {
-        if (!o.data) {
-          return false;
-        }
-        const orderDate = moment(o.data, 'DD-MM-YYYY');
-        const diff = today.diff(orderDate, 'days');
-        console.log(diff);
-        return diff > delta;
-      });
-    }),
-    mergeMap(orders => {
-      appDb.init();
-      const observables = orders.map((order, i) => {
-        console.log(`${i} of ${orders.length} orders processed`);
-        return apiClient.fetchProviderById(order.idContato).pipe(
-          tap(provider => {
-            console.log(provider && provider.email);
-            repository
-              .persistNotificationLog(
-                provider,
-                order,
-                configs.getAppEmailFrom()
-              )
-              .subscribe(persisted => {});
-            // emailSender.sendEmail("viola.von@ethereal.email", configs);
-          })
-        );
-      });
-      return forkJoin(observables).pipe(
-        map(() => {
-          appDb.end();
-          return true;
-        }),
-        catchError(err => {
-          appDb.end();
-          return new BehaviorSubject(false).asObservable();
-        })
-      );
-    })
-  );
-}
 
 function shutdown(): void {
   statusHandler.changeStatus(Statuses.FINALIZING);
@@ -183,8 +117,8 @@ function shutdown(): void {
   if (appDb) {
     appDb.destroy();
   }
-  if (cron) {
-    cron.stop();
+  if (notificationShceduler) {
+    notificationShceduler.stop();
   }
   if (httpServer) {
     httpServer.shutdown();
