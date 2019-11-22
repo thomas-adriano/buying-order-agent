@@ -1,32 +1,38 @@
-import * as fs from 'fs';
-import moment from 'moment';
-import 'moment/locale/pt-br';
-import * as path from 'path';
-import { BehaviorSubject, forkJoin, Observable } from 'rxjs';
-import { catchError, map, mergeMap, tap } from 'rxjs/operators';
-import { AppConfigs } from './app-configs';
-import { Cron } from './cron/cron';
-import { Database } from './db/database';
-import { MigrateDb } from './db/migrate-db';
-import { Repository } from './db/repository';
-import { EmailSender } from './email/email-sender';
-import { ApiClient } from './http/api-client';
-import { HttpClient } from './http/http-client';
-import { HttpServer, IServerConfigs } from './http/http-server';
-import { AppStatusHandler } from './websocket/app-status-handler';
-import { Statuses } from './websocket/statuses';
-import { WebsocketServer } from './websocket/websocket-server';
-import { NotificationScheduler } from './notification-scheduler';
+import * as fs from "fs";
+import moment from "moment";
+import "moment/locale/pt-br";
+import * as path from "path";
+import {
+  BehaviorSubject,
+  forkJoin,
+  Observable,
+  Subscriber,
+  Subscription
+} from "rxjs";
+import { catchError, map, mergeMap, tap } from "rxjs/operators";
+import { AppConfigs } from "./app-configs";
+import { Cron } from "./cron/cron";
+import { Database } from "./db/database";
+import { MigrateDb } from "./db/migrate-db";
+import { Repository } from "./db/repository";
+import { EmailSender } from "./email/email-sender";
+import { ApiClient } from "./http/api-client";
+import { HttpClient } from "./http/http-client";
+import { HttpServer, IServerConfigs } from "./http/http-server";
+import { AppStatusHandler } from "./websocket/app-status-handler";
+import { Statuses } from "./websocket/statuses";
+import { WebsocketServer } from "./websocket/websocket-server";
+import { NotificationScheduler } from "./notification-scheduler";
 
-console.log('app: buying-order-agent is starting...');
+console.log("app: buying-order-agent is starting...");
 
-process.on('message', msg => {
-  if (msg === 'shutdown') {
+process.on("message", msg => {
+  if (msg === "shutdown") {
     shutdown();
   }
 });
 
-process.on('SIGINT', () => {
+process.on("SIGINT", () => {
   shutdown();
 });
 
@@ -54,66 +60,64 @@ const repository = new Repository(appDb, serverConfigs);
 const migrator = new MigrateDb(serverConfigs, rootDb);
 const httpServer = new HttpServer(serverConfigs, repository);
 let notificationShceduler: NotificationScheduler;
+let notificationShcedulerSubscriber: Subscription;
 
-rootDb.init();
 migrator.init().subscribe(
   () => {
-    repository.end();
     httpServer.startServer().subscribe(() => {
       statusHandler.changeStatus(Statuses.SERVER_RUNNING);
       httpServer.configurationSaved().subscribe(configs => {
-        repository.begin();
-        repository
-          .persistConfiguration(configs)
-          .subscribe(() =>
-            console.log('app: configurations saved to database')
-          );
-        appDb.end();
+        repository.persistConfiguration(configs).subscribe(() => {
+          console.log("app: configurations saved to database");
+        });
       });
 
       httpServer.agentRun().subscribe(() => {
         console.log(`app: running scheduler`);
-        repository.begin();
         repository.getConfiguration().subscribe(config => {
-          appDb.end();
-          if (!notificationShceduler) {
-            const cron = new Cron(config);
-            notificationShceduler = new NotificationScheduler(
-              config,
-              cron,
-              apiClient,
-              repository
-            );
+          if (notificationShceduler) {
+            notificationShceduler.stop();
           }
-          notificationShceduler.start().subscribe(
-            () => {
-              console.log('orders verified');
-              statusHandler.changeStatus(Statuses.SCHEDULER_RUNNING);
-            },
-            err => {
-              console.error(err);
-              statusHandler.changeStatus(Statuses.SCHEDULER_ERROR);
-            }
+          const cron = new Cron(config);
+          notificationShceduler = new NotificationScheduler(
+            config,
+            cron,
+            apiClient,
+            repository,
+            statusHandler
           );
+          notificationShcedulerSubscriber = notificationShceduler
+            .start()
+            .subscribe(
+              () => {
+                console.log("app: orders verified");
+              },
+              err => {
+                console.error(err);
+                statusHandler.changeStatus(Statuses.SCHEDULER_ERROR);
+              },
+              () => console.log("app: notificationShceduler completed")
+            );
         });
       });
 
       httpServer.agentStop().subscribe(() => {
         statusHandler.changeStatus(Statuses.SERVER_RUNNING);
         notificationShceduler.stop();
+        notificationShcedulerSubscriber.unsubscribe();
+        console.log("app: stoping");
       });
     });
   },
   err => {
-    console.error('app: an error occurred while executing migrateDb');
+    console.error("app: an error occurred while executing migrateDb");
     console.error(err);
-    repository.end();
   }
 );
 
 function shutdown(): void {
   statusHandler.changeStatus(Statuses.FINALIZING);
-  console.log('Buying Order Agent is shutting down');
+  console.log("Buying Order Agent is shutting down");
   if (appDb) {
     appDb.destroy();
   }
@@ -131,7 +135,7 @@ function shutdown(): void {
 function loadServerConfigs(): IServerConfigs {
   const p = `${__dirname}${path.sep}server.json`;
   console.log(`app: reading serverConfigs from ${p}`);
-  const fc = fs.readFileSync(p, 'utf8');
+  const fc = fs.readFileSync(p, "utf8");
   console.log(`app: serverConfigs file loaded ${fc}`);
   const c = JSON.parse(fc) as IServerConfigs;
   return c;

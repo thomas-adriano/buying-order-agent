@@ -1,21 +1,25 @@
-import moment from 'moment';
-import { BehaviorSubject, EMPTY, Observable } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
-import { AppConfigs } from '../app-configs';
-import { IServerConfigs } from '../http/http-server';
-import { BuyingOrder } from '../models/buying-order.model';
-import { Provider } from '../models/provider.model';
-import { Database } from './database';
+import moment from "moment";
+import { BehaviorSubject, Observable, throwError } from "rxjs";
+import { catchError, map, tap } from "rxjs/operators";
+import { AppConfigs } from "../app-configs";
+import { IServerConfigs } from "../http/http-server";
+import { BuyingOrder } from "../models/buying-order.model";
+import { Provider } from "../models/provider.model";
+import { Database } from "./database";
 
 export class Repository {
   constructor(private db: Database, private configs: IServerConfigs) {}
 
-  public begin(): void {
-    this.db.init();
-  }
-
   public end(): void {
     this.db.end();
+  }
+
+  public isOrderAlreadyProcessed(order: BuyingOrder): Observable<boolean> {
+    return this.db
+      .execute(
+        `SELECT * FROM \`${this.configs.appDatabase}\`.\`order-notification\` WHERE buyingOrderId = ${order.id} AND SENT = 1 LIMIT 1`
+      )
+      .pipe(map(res => res && res.length > 0));
   }
 
   public persistNotificationLog(
@@ -33,38 +37,44 @@ export class Repository {
       !order.dataPrevista ||
       !this.configs
     ) {
-      return EMPTY;
+      return new BehaviorSubject(false);
     }
-    const todayDate = moment().format('YYYY/MM/DD HH:mm:ss');
-    const emptyDate = moment('01-01-1970', 'DD-MM-YYYY').format('YYYY-MM-DD');
+    const todayDate = moment().format("YYYY/MM/DD HH:mm:ss");
+    const emptyDate = moment("01-01-1970", "DD-MM-YYYY").format("YYYY-MM-DD");
     const orderDate = order.data
-      ? moment(order.data, 'DD-MM-YYYY').format('YYYY-MM-DD')
+      ? moment(order.data, "DD-MM-YYYY").format("YYYY-MM-DD")
       : emptyDate;
     const previewOrderDate = order.dataPrevista
-      ? moment(order.dataPrevista, 'DD-MM-YYYY').format('YYYY-MM-DD')
+      ? moment(order.dataPrevista, "DD-MM-YYYY").format("YYYY-MM-DD")
       : emptyDate;
     return this.db
       .execute(
-        `INSERT INTO \`${this.configs.appDatabase}\`.\`order-notification\` (timestamp,sent,providerEmail,employeeEmail,orderDate,estimatedOrderDate,providerId) VALUES (
-              '${todayDate}',
-              ${sent},
-              '${provider.email}',
-              '${emailFrom}',
-              '${orderDate}',
-              '${previewOrderDate}',
-              ${order.idContato});`
+        `INSERT INTO \`${this.configs.appDatabase}\`.\`order-notification\`
+          (timestamp,sent,providerEmail,employeeEmail,orderDate,estimatedOrderDate,providerId,buyingOrderId)
+          VALUES (
+            '${todayDate}',
+            ${sent},
+            '${provider.email}',
+            '${emailFrom}',
+            '${orderDate}',
+            '${previewOrderDate}',
+            ${order.idContato},
+            ${order.id}
+          )
+          ON DUPLICATE KEY UPDATE
+            sent=${sent},
+            timestamp='${todayDate}';`
       )
       .pipe(
         map(() => {
-          console.log('repository: notification logged into db');
           return true;
         }),
         catchError(err => {
           console.error(
-            'repository: error trying to log notification into db',
+            "repository: error trying to log notification into db",
             err
           );
-          return new BehaviorSubject(false).asObservable();
+          return throwError(err);
         })
       );
   }
@@ -107,15 +117,14 @@ export class Repository {
       )
       .pipe(
         map(() => {
-          console.log('repository: notification logged into db');
           return true;
         }),
         catchError(err => {
           console.error(
-            'repository: error trying to log notification into db',
+            "repository: error trying to log notification into db",
             err
           );
-          return new BehaviorSubject(false).asObservable();
+          return throwError(err);
         })
       );
   }
@@ -137,6 +146,7 @@ export class Repository {
               .setAppEmailName(res.appEmailName)
               .setAppEmailUser(res.appEmailUser)
               .setAppEmailText(res.appEmailText)
+              .setAppEmailHtml(res.appEmailHtml)
               .setAppEmailSubject(res.appEmailSubject)
               .setAppEmailPassword(res.appEmailPassword)
               .setAppEmailFrom(res.appEmailFrom)

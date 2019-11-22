@@ -1,7 +1,7 @@
-import { BehaviorSubject, forkJoin, Observable, zip, of } from 'rxjs';
-import { catchError, map, tap, mergeMap } from 'rxjs/operators';
-import { IServerConfigs } from '../http/http-server';
-import { Database } from './database';
+import { BehaviorSubject, forkJoin, Observable, zip } from "rxjs";
+import { map, mergeMap, tap } from "rxjs/operators";
+import { IServerConfigs } from "../http/http-server";
+import { Database } from "./database";
 
 export class MigrateDb {
   constructor(private configs: IServerConfigs, private db: Database) {}
@@ -13,9 +13,9 @@ export class MigrateDb {
       this.createTables(),
       this.createUser().pipe(mergeMap(ran => this.grantPermissions()))
     ).pipe(
-      tap(() =>
-        console.log('migration: database migration completed successfully!')
-      )
+      tap(() => {
+        console.log("migration: database migration completed successfully!");
+      })
     );
   }
 
@@ -25,7 +25,7 @@ export class MigrateDb {
         this.db
           .execute(
             `CREATE TABLE IF NOT EXISTS \`${this.configs.appDatabase}\`.\`order-notification\` (
-            \`id\` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            \`buyingOrderId\` INT NOT NULL PRIMARY KEY,
             \`providerId\` INT NOT NULL,
             \`timestamp\` DATETIME NOT NULL,
             \`sent\` BOOL,

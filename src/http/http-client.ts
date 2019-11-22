@@ -1,5 +1,5 @@
-import * as https from 'https';
-import { Observable, Observer } from 'rxjs';
+import * as https from "https";
+import { Observable, Observer } from "rxjs";
 
 export class HttpClient {
   constructor(private jwtKey: string, private host: string) {}
@@ -13,22 +13,26 @@ export class HttpClient {
             path: resource,
             headers: {
               Authorization: `${this.jwtKey}`,
-              Accept: 'application/json',
-              'Content-Type': 'application/json'
+              Accept: "application/json",
+              "Content-Type": "application/json"
             }
           },
           resp => {
-            let body = '';
-            resp.on('data', chunk => {
+            let body = "";
+            resp.on("data", chunk => {
               body += chunk;
             });
-            resp.on('end', () => {
-              const json = JSON.parse(body) as any[];
-              observer.next(json as any);
+            resp.on("end", () => {
+              try {
+                const json = JSON.parse(body) as any[];
+                observer.next(json as any);
+              } catch (e) {
+                observer.error(e);
+              }
             });
           }
         )
-        .on('error', e => {
+        .on("error", e => {
           observer.error(e);
         });
     });

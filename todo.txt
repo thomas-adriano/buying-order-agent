@@ -1,4 +1,2 @@
-- processar apenas orders ainda nao processadas ou com falha;
-- corrigir erro no cron, está rodando apenas a primeira chamada do runOrdersVerification, o CRON nao esta rodando;
-- corrigir comportamento de start/stop via web;
-- corrigir exibicao de status do 'scheduler running';
+- ajustar pm2
+- Cron com envio de email nao roda

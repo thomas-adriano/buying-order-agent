@@ -1,9 +1,9 @@
-import * as http from 'http';
-import { Observable, Observer, Subject } from 'rxjs';
-import * as url from 'url';
-import { AppConfigs } from '../app-configs';
-import { Repository } from '../db/repository';
-import { AppStatusHandler } from '../websocket/app-status-handler';
+import * as http from "http";
+import { Observable, Observer, Subject } from "rxjs";
+import * as url from "url";
+import { AppConfigs } from "../app-configs";
+import { Repository } from "../db/repository";
+import { AppStatusHandler } from "../websocket/app-status-handler";
 
 export interface IServerConfigs {
   appHost: string;
@@ -32,24 +32,24 @@ export class HttpServer {
   public startServer(): Observable<void> {
     this.server = http.createServer((req, res) => {
       const pathName = url.parse(req.url as any).pathname;
-      if (req.method === 'OPTIONS') {
+      if (req.method === "OPTIONS") {
         this.writeResponseHeaders(req, res);
         res.end();
       }
-      if (req.method === 'POST') {
-        let body = '';
-        req.on('data', chunk => {
+      if (req.method === "POST") {
+        let body = "";
+        req.on("data", chunk => {
           body += chunk;
         });
         this.writeResponseHeaders(req, res);
-        if (pathName === '/configuration') {
-          console.log('http-server: configurations saved');
-          req.on('end', () => {
+        if (pathName === "/configuration") {
+          console.log("http-server: configurations saved");
+          req.on("end", () => {
             const json = JSON.parse(body);
             res.write(
               JSON.stringify({
                 status: 200,
-                msg: 'Configurations saved'
+                msg: "Configurations saved"
               })
             );
             res.end();
@@ -72,45 +72,43 @@ export class HttpServer {
         }
       }
 
-      if (req.method === 'GET') {
+      if (req.method === "GET") {
         this.writeResponseHeaders(req, res);
 
-        if (pathName === '/configuration') {
-          this.repository.begin();
+        if (pathName === "/configuration") {
           this.repository.getConfiguration().subscribe(configs => {
             res.write(JSON.stringify(configs));
             res.end();
-            this.repository.end();
           });
         }
 
-        if (pathName === '/start-agent') {
+        if (pathName === "/start-agent") {
           this.agentRunSubject.next();
           res.write(
             JSON.stringify({
               status: 200,
-              msg: 'agent started'
+              msg: "agent started"
             })
           );
           res.end();
         }
 
-        if (pathName === '/stop-agent') {
+        if (pathName === "/stop-agent") {
           this.agentStopSubject.next();
           res.write(
             JSON.stringify({
               status: 200,
-              msg: 'agent stopped'
+              msg: "agent stopped"
             })
           );
           res.end();
         }
 
-        if (pathName === '/status') {
+        if (pathName === "/status") {
           res.write(
             JSON.stringify({
               status: 200,
-              msg: 'running'
+              msg: "running"
             })
           );
           res.end();
@@ -119,14 +117,14 @@ export class HttpServer {
     });
 
     return Observable.create((observer: Observer<any>) => {
-      console.log('http-server: initializing');
+      console.log("http-server: initializing");
       this.server.listen(this.configs.appPort, this.configs.appHost, () => {
-        console.log('http-server: started');
+        console.log("http-server: started");
         observer.next(0);
       });
-      this.server.on('error', err => {
+      this.server.on("error", err => {
         observer.error(err);
-        console.error('http-server: error');
+        console.error("http-server: error");
       });
     });
   }
@@ -154,10 +152,10 @@ export class HttpServer {
     res: http.ServerResponse
   ): void {
     res.writeHead(200, {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': req.headers.origin,
-      'Access-Control-Allow-Methods': 'POST, PUT, GET, OPTIONS, DELETE',
-      'Access-Control-Allow-Headers': 'content-type'
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": req.headers.origin,
+      "Access-Control-Allow-Methods": "POST, PUT, GET, OPTIONS, DELETE",
+      "Access-Control-Allow-Headers": "content-type"
     });
   }
 }
