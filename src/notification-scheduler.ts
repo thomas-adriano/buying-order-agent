@@ -69,18 +69,19 @@ export class NotificationScheduler {
     }
   }
 
-  public start(): Observable<any> {
+  public start(): Observable<number> {
     console.log("notification-scheduler: starting scheduler");
     this.stop();
     this.statusHandler.changeStatus(Statuses.SCHEDULER_RUNNING);
-    const subject = new Subject();
+    const subject = new Subject<number>();
     this.runOrdersVerification().subscribe({
+      next: total => subject.next(total),
       error: err => subject.error(err),
       complete: () => {
-        subject.next();
         this.cron.start().subscribe(() => {
           this.runOrdersVerification().subscribe({
-            complete: () => subject.next()
+            next: total => subject.next(total),
+            error: err => subject.error(err)
           });
         });
       }
@@ -100,14 +101,11 @@ export class NotificationScheduler {
     this.executing = true;
 
     const subject = new Subject<number>();
+    let processedCount = 0;
     this.fetchProvidersAndOrders().subscribe(providersAndOrders => {
       const total = providersAndOrders.length;
       let count = 0;
       for (let i = 0; i < total; i++) {
-        console.log(
-          `notification-scheduler: preparing e-mail from order ${i +
-            1} from ${total}`
-        );
         const entry = providersAndOrders[i];
         if (!entry.provider.email) {
           this.persistNotificationNotSent(
@@ -116,19 +114,16 @@ export class NotificationScheduler {
           ).subscribe(
             () => {
               count++;
-              console.log(
-                `notification-scheduler: logging notification ${i +
-                  1} from ${total} NOT sent into db`
-              );
               if (count === total) {
-                subject.next(count);
+                subject.next(processedCount);
                 subject.complete();
               }
             },
             err => {
+              console.error("notification-scheduler: error logging into db");
               count++;
               if (count === total) {
-                subject.next(count);
+                subject.next(processedCount);
                 subject.complete();
               }
             }
@@ -137,13 +132,9 @@ export class NotificationScheduler {
           this.sendEmail(entry).subscribe(
             p => {
               count++;
-              console.log(
-                `notification-scheduler: logging notification ${
-                  entry.order.id
-                } ${i + 1} from ${total} sent into db`
-              );
+              processedCount++;
               if (count === total) {
-                subject.next(count);
+                subject.next(processedCount);
                 subject.complete();
               }
             },
@@ -151,7 +142,7 @@ export class NotificationScheduler {
               console.error("notification-scheduler: error logging into db");
               count++;
               if (count === total) {
-                subject.next(count);
+                subject.next(processedCount);
                 subject.complete();
               }
               return throwError(e);
@@ -165,7 +156,6 @@ export class NotificationScheduler {
   }
 
   private sendEmail(entry: IProviderAndOrder): Observable<any> {
-    console.log(`notification-scheduler: sending e-mail ${entry.order.id}`);
     return this.emailSender
       .sendEmail("viola.von@ethereal.email", this.configs)
       .pipe(
@@ -222,20 +212,18 @@ export class NotificationScheduler {
   private fetchProvidersAndOrders(): Observable<IProviderAndOrder[]> {
     return this.fetchBuyingOrders().pipe(
       mergeMap(orders => {
-        const ordersCount = orders.length;
         const subject = new BehaviorSubject<IProviderAndOrder[]>([]);
-        console.log(`notification-scheduler: ${ordersCount} orders filtered`);
         const ret: IProviderAndOrder[] = [];
         const total = orders.length;
         let count = 0;
+        console.log(
+          `notification-scheduler: fetching providers of ${total} orders`
+        );
         orders.forEach(o => {
           this.fetchProvidersById(o.idContato).subscribe(
             provider => {
               count++;
               ret.push({ order: o, provider });
-              console.log(
-                `notification-scheduler: provider infos ${count} from ${total} fetched. Order n. ${o.id}`
-              );
               if (count === total) {
                 console.log(
                   "notification-scheduler: fetching provider finished"
@@ -273,21 +261,21 @@ export class NotificationScheduler {
         console.log(
           `notification-scheduler: filtering orders ${delta} day(s) old`
         );
-        return os
-          .filter(o => {
-            if (!o.data) {
-              return false;
-            }
-            const orderDate = moment(o.data, "DD-MM-YYYY");
-            const diff = today.diff(orderDate, "days");
-            return diff > delta;
-          })
-          .slice(0, 100);
+        return os.filter(o => {
+          if (!o.data) {
+            return false;
+          }
+          const orderDate = moment(o.data, "DD-MM-YYYY");
+          const diff = today.diff(orderDate, "days");
+          return diff > delta;
+        });
       })
     );
     const unprocessedOrders: BuyingOrder[] = [];
     orders.subscribe(os => {
       const total = os.length;
+      console.log(`notification-scheduler: ${total} orders filtered`);
+      console.log(`notification-scheduler: filtering unprocessed orders`);
       let count = 0;
       os.forEach(o => {
         this.repository.isOrderAlreadyProcessed(o).subscribe(
@@ -297,6 +285,9 @@ export class NotificationScheduler {
             }
             count++;
             if (count === total) {
+              console.log(
+                `notification-scheduler: ${unprocessedOrders.length} unprocessed orders filtered`
+              );
               subject.next(unprocessedOrders);
               subject.complete();
             }

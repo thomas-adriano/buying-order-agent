@@ -90,8 +90,8 @@ migrator.init().subscribe(
           notificationShcedulerSubscriber = notificationShceduler
             .start()
             .subscribe(
-              () => {
-                console.log("app: orders verified");
+              total => {
+                console.log(`app: ${total} orders verified`);
               },
               err => {
                 console.error(err);

@@ -4,10 +4,13 @@
   "description": "Sends e-mail notifications near buying orders expiration.",
   "main": "dist/app.js",
   "scripts": {
+    "monit": "pm2 monit",
     "debug": "node --nolazy --inspect-brk=9229 dist/app.js",
     "start": "node dist/app.js",
-    "start-pm2": "pm2 start",
-    "watch-pm2": "pm2 start --watch",
+    "start:pm2": "pm2 start",
+    "stop:pm2": "pm2 stop BUYING-ORDER-AGENT",
+    "restart:pm2": "pm2 restart BUYING-ORDER-AGENT",
+    "watch-ts:pm2": "pm2 start --watch",
     "build-ts": "cp ./src/server.json ./dist/server.json && tsc",
     "watch-ts": "cp ./src/server.json ./dist/server.json && tsc -w",
     "test": "echo \"Error: no test specified\" && exit 1"
