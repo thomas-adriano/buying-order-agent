@@ -17,9 +17,14 @@ export class Repository {
   public isOrderAlreadyProcessed(order: BuyingOrder): Observable<boolean> {
     return this.db
       .execute(
-        `SELECT * FROM \`${this.configs.appDatabase}\`.\`order-notification\` WHERE buyingOrderId = ${order.id} AND SENT = 1 LIMIT 1`
+        `SELECT COUNT(*) AS RES FROM \`${this.configs.appDatabase}\`.\`order-notification\` WHERE buyingOrderId = ${order.id} AND SENT = 1 LIMIT 1`
       )
-      .pipe(map(res => res && res.length > 0));
+      .pipe(
+        map(res => {
+          const r = res.RES;
+          return !!r;
+        })
+      );
   }
 
   public persistNotificationLog(
@@ -28,15 +33,8 @@ export class Repository {
     emailFrom: string,
     sent = true
   ): Observable<boolean> {
-    if (
-      !provider ||
-      !provider.email ||
-      !order ||
-      !order.idContato ||
-      !order.data ||
-      !order.dataPrevista ||
-      !this.configs
-    ) {
+    if (!provider || !order || !this.configs) {
+      console.log("NOT LOGGGED");
       return new BehaviorSubject(false);
     }
     const todayDate = moment().format("YYYY/MM/DD HH:mm:ss");
@@ -135,7 +133,7 @@ export class Repository {
         `SELECT * FROM \`${this.configs.appDatabase}\`.\`configuration\` ORDER BY ID DESC LIMIT 1`
       )
       .pipe(
-        map(([res]) => {
+        map(res => {
           if (res) {
             return new AppConfigs()
               .setAppCronPattern(res.appCronPattern)

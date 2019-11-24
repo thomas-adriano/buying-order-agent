@@ -64,6 +64,7 @@ let notificationShcedulerSubscriber: Subscription;
 
 migrator.init().subscribe(
   () => {
+    console.log("app: migration complete");
     httpServer.startServer().subscribe(() => {
       statusHandler.changeStatus(Statuses.SERVER_RUNNING);
       httpServer.configurationSaved().subscribe(configs => {

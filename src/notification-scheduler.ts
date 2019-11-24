@@ -73,10 +73,20 @@ export class NotificationScheduler {
     console.log("notification-scheduler: starting scheduler");
     this.stop();
     this.statusHandler.changeStatus(Statuses.SCHEDULER_RUNNING);
-    return concat(
-      this.runOrdersVerification(),
-      this.cron.start().pipe(tap(() => this.runOrdersVerification()))
-    );
+    const subject = new Subject();
+    this.runOrdersVerification().subscribe({
+      error: err => subject.error(err),
+      complete: () => {
+        subject.next();
+        this.cron.start().subscribe(() => {
+          this.runOrdersVerification().subscribe({
+            complete: () => subject.next()
+          });
+        });
+      }
+    });
+
+    return subject.asObservable();
   }
 
   private runOrdersVerification(): Observable<number> {
@@ -89,72 +99,73 @@ export class NotificationScheduler {
     }
     this.executing = true;
 
-    return this.fetchProvidersAndOrders().pipe(
-      mergeMap(providersAndOrders => {
-        const subject = new Subject<number>();
-        const total = providersAndOrders.length;
-        let count = 0;
-        for (let i = 0; i < total; i++) {
-          console.log(
-            `notification-scheduler: preparing e-mail from order ${i +
-              1} from ${total}`
+    const subject = new Subject<number>();
+    this.fetchProvidersAndOrders().subscribe(providersAndOrders => {
+      const total = providersAndOrders.length;
+      let count = 0;
+      for (let i = 0; i < total; i++) {
+        console.log(
+          `notification-scheduler: preparing e-mail from order ${i +
+            1} from ${total}`
+        );
+        const entry = providersAndOrders[i];
+        if (!entry.provider.email) {
+          this.persistNotificationNotSent(
+            entry.order,
+            entry.provider
+          ).subscribe(
+            () => {
+              count++;
+              console.log(
+                `notification-scheduler: logging notification ${i +
+                  1} from ${total} NOT sent into db`
+              );
+              if (count === total) {
+                subject.next(count);
+                subject.complete();
+              }
+            },
+            err => {
+              count++;
+              if (count === total) {
+                subject.next(count);
+                subject.complete();
+              }
+            }
           );
-          const entry = providersAndOrders[i];
-          if (!entry.provider.email) {
-            this.persistNotificationNotSent(
-              entry.order,
-              entry.provider
-            ).subscribe(
-              () => {
-                count++;
-                if (count === total) {
-                  subject.next(count);
-                  subject.complete();
-                }
-              },
-              err => {
-                count++;
-                if (count === total) {
-                  subject.next(count);
-                  subject.complete();
-                }
+        } else {
+          this.sendEmail(entry).subscribe(
+            p => {
+              count++;
+              console.log(
+                `notification-scheduler: logging notification ${
+                  entry.order.id
+                } ${i + 1} from ${total} sent into db`
+              );
+              if (count === total) {
+                subject.next(count);
+                subject.complete();
               }
-            );
-          } else {
-            this.sendEmail(entry).subscribe(
-              p => {
-                console.log(
-                  "notification-scheduler: logged into db",
-                  count,
-                  total
-                );
-                count++;
-                if (count === total) {
-                  console.log("completed");
-                  subject.next(count);
-                  subject.complete();
-                }
-              },
-              e => {
-                console.error("notification-scheduler: error logging into db");
-                count++;
-                if (count === total) {
-                  subject.next(count);
-                  subject.complete();
-                }
-                return throwError(e);
+            },
+            e => {
+              console.error("notification-scheduler: error logging into db");
+              count++;
+              if (count === total) {
+                subject.next(count);
+                subject.complete();
               }
-            );
-          }
+              return throwError(e);
+            }
+          );
         }
-
-        subject.subscribe({ complete: () => (this.executing = false) });
-        return subject.asObservable();
-      })
-    );
+      }
+    });
+    subject.subscribe({ complete: () => (this.executing = false) });
+    return subject.asObservable();
   }
 
   private sendEmail(entry: IProviderAndOrder): Observable<any> {
+    console.log(`notification-scheduler: sending e-mail ${entry.order.id}`);
     return this.emailSender
       .sendEmail("viola.von@ethereal.email", this.configs)
       .pipe(
@@ -200,7 +211,6 @@ export class NotificationScheduler {
     order: BuyingOrder,
     provider: Provider
   ): Observable<boolean> {
-    console.log("persistNotificationSent called");
     return this.repository.persistNotificationLog(
       provider,
       order,
@@ -280,16 +290,21 @@ export class NotificationScheduler {
       const total = os.length;
       let count = 0;
       os.forEach(o => {
-        this.repository.isOrderAlreadyProcessed(o).subscribe(processed => {
-          if (!processed) {
-            unprocessedOrders.push(o);
+        this.repository.isOrderAlreadyProcessed(o).subscribe(
+          processed => {
+            if (!processed) {
+              unprocessedOrders.push(o);
+            }
+            count++;
+            if (count === total) {
+              subject.next(unprocessedOrders);
+              subject.complete();
+            }
+          },
+          err => {
+            subject.error(err);
           }
-          count++;
-          if (count === total) {
-            subject.next(unprocessedOrders);
-            subject.complete();
-          }
-        });
+        );
       });
     });
     return subject.asObservable();

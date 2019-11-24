@@ -1,68 +1,67 @@
 import * as mysql from "mysql";
-import {
-  Observable,
-  Observer,
-  BehaviorSubject,
-  Subject,
-  ReplaySubject
-} from "rxjs";
+import { Observable, Observer, ReplaySubject, Subject, throwError } from "rxjs";
+import { catchError, mergeMap, map } from "rxjs/operators";
 
 export class Database {
-  private _connection: mysql.Connection;
+  private connection: mysql.Connection | undefined;
   private disconnectTimeout: NodeJS.Timeout | undefined;
   private disconnectTimeoutValue = 1000;
   private connecting = false;
-  private connSubject = new ReplaySubject<mysql.Connection>(1);
+  private connSubject = new Subject<mysql.Connection>();
 
   constructor(private cfg: mysql.ConnectionConfig) {}
 
   public execute(stmt: string): Observable<any> {
-    return Observable.create((observer: Observer<any>) => {
-      this.restartDcTimeout();
-      try {
-        this.getConnection().subscribe(conn => {
-          conn.query(stmt, (error, results, fields) => {
-            if (error) {
-              observer.error(error);
-              return;
-            }
-            observer.next(results);
-            observer.complete();
-          });
+    const subject = new Subject<any>();
+    this.getConnection().subscribe(
+      conn => {
+        conn.query(stmt, (error, results, fields) => {
+          if (error) {
+            subject.error(error);
+            return;
+          }
+          // console.log(`database: ${stmt.slice(0, 52)}`);
+          subject.next(results[0]);
+          subject.complete();
         });
-      } catch (e) {
-        console.error("database: error executing sql stmt");
-        observer.error(e);
-      }
-    });
+      },
+      catchError(err => {
+        console.error("database: error executing sql stmt", err);
+        return throwError(err);
+      })
+    );
+    return subject.asObservable();
   }
 
   public end(): Observable<any> {
     console.log(`database: closing db connection`);
     return Observable.create((observer: Observer<any>) => {
       try {
-        this._connection.end(err => {
-          if (err) {
-            console.error(`database: fail closing db connection`);
-            observer.error(err);
-          } else {
-            console.log(`database: db connection closed`);
-            observer.next(true);
-            observer.complete();
-          }
-        });
+        if (this.connection) {
+          this.connection.end(err => {
+            if (err) {
+              console.error(`database: fail closing db connection`);
+              observer.error(err);
+            } else {
+              observer.next(true);
+              observer.complete();
+            }
+          });
+          this.connection = undefined;
+        } else {
+          observer.next(false);
+        }
       } catch (e) {
-        console.warn(`database: could not close connection`);
-        observer.next(false);
-        observer.complete();
+        console.error(`database: could not close connection`);
+        observer.error(e);
       }
     });
   }
 
   public destroy(): void {
-    if (this._connection) {
+    if (this.connection) {
       console.log(`database: db connection destroyed`);
-      this._connection.destroy();
+      this.connection.destroy();
     }
   }
 
@@ -82,27 +81,32 @@ export class Database {
 
   private getConnection(): Observable<mysql.Connection> {
     if (
-      (!this._connection || this._connection.state === "disconnected") &&
+      (!this.connection || this.connection.state !== "connected") &&
       !this.connecting
     ) {
       this.connecting = true;
-      this._connection = mysql.createConnection(this.cfg);
-      this._connection.connect(err => {
-        if (err) {
-          this.connSubject.error(err);
-        } else {
-          this.connSubject.next(this._connection);
+      this.end().subscribe(() => {
+        this.connection = mysql.createConnection(this.cfg);
+        this.connection.connect(err => {
           this.connecting = false;
-        }
+          if (err) {
+            this.connSubject.error(err);
+          } else {
+            this.restartDcTimeout();
+            this.connSubject.next(this.connection);
+            console.log("database: connection established");
+          }
+        });
+
+        this.connection.on("end", () => {
+          console.log("database: connection end");
+          this.clearDcTimeout();
+          this.connecting = false;
+        });
       });
-      this._connection.on("end", () => {
-        console.log("database: connection end");
-        this.clearDcTimeout();
-      });
-      this.restartDcTimeout();
-      console.log("database: connection established");
+    } else if (this.connection && this.connection.state !== "disconnected") {
+      this.connSubject.next(this.connection);
     }
-    this.connSubject.next(this._connection);
     return this.connSubject.asObservable();
   }
 }

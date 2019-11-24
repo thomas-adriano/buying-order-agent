@@ -1,5 +1,5 @@
-import { BehaviorSubject, forkJoin, Observable, zip } from "rxjs";
-import { map, mergeMap, tap } from "rxjs/operators";
+import { forkJoin, Observable, zip, merge, concat } from "rxjs";
+import { finalize, map } from "rxjs/operators";
 import { IServerConfigs } from "../http/http-server";
 import { Database } from "./database";
 
@@ -11,20 +11,23 @@ export class MigrateDb {
     return zip(
       this.createDb(),
       this.createTables(),
-      this.createUser().pipe(mergeMap(ran => this.grantPermissions()))
-    ).pipe(
-      tap(() => {
-        console.log("migration: database migration completed successfully!");
-      })
+      this.createUser(),
+      this.grantPermissions()
     );
   }
 
-  private createTables(): Observable<boolean[]> {
-    try {
-      return forkJoin(
-        this.db
-          .execute(
-            `CREATE TABLE IF NOT EXISTS \`${this.configs.appDatabase}\`.\`order-notification\` (
+  private createDb(): Observable<void> {
+    return this.db.execute(
+      `CREATE DATABASE IF NOT EXISTS ${this.configs.appDatabase}
+          CHARACTER SET utf8
+          COLLATE utf8_unicode_ci`
+    );
+  }
+
+  private createTables(): Observable<any> {
+    return zip(
+      this.db.execute(
+        `CREATE TABLE IF NOT EXISTS \`${this.configs.appDatabase}\`.\`order-notification\` (
             \`buyingOrderId\` INT NOT NULL PRIMARY KEY,
             \`providerId\` INT NOT NULL,
             \`timestamp\` DATETIME NOT NULL,
@@ -35,11 +38,9 @@ export class MigrateDb {
             \`employeeEmail\` VARCHAR(128)
           )
           ENGINE = InnoDB;`
-          )
-          .pipe(map(() => true)),
-        this.db
-          .execute(
-            `CREATE TABLE IF NOT EXISTS \`${this.configs.appDatabase}\`.\`configuration\` (
+      ),
+      this.db.execute(
+        `CREATE TABLE IF NOT EXISTS \`${this.configs.appDatabase}\`.\`configuration\` (
             \`id\` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
             \`appEmailName\` VARCHAR(128),
             \`appEmailUser\` VARCHAR(128),
@@ -58,19 +59,7 @@ export class MigrateDb {
             \`appNotificationTriggerDelta\` INT
           )
           ENGINE = InnoDB;`
-          )
-          .pipe(map(() => true))
-      );
-    } catch (e) {
-      return new BehaviorSubject([false]);
-    }
-  }
-
-  private createDb(): Observable<void> {
-    return this.db.execute(
-      `CREATE DATABASE IF NOT EXISTS ${this.configs.appDatabase}
-          CHARACTER SET utf8
-          COLLATE utf8_unicode_ci`
+      )
     );
   }
 

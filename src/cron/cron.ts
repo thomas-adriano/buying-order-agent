@@ -34,7 +34,9 @@ export class Cron {
     if (this.cronJob && this.cronJob.running) {
       console.log(`cron: stopping cron job`);
       this.cronJob.stop();
-      this.cronObserver.complete();
+      if (this.cronObserver) {
+        this.cronObserver.complete();
+      }
     }
   }
 
