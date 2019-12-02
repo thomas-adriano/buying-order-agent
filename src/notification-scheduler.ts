@@ -1,26 +1,12 @@
 import moment from "moment";
 import {
   BehaviorSubject,
-  forkJoin,
   Observable,
-  Observer,
   Subject,
-  Subscription,
-  throwError,
-  EMPTY,
-  of,
   Subscriber,
-  zip,
-  concat
+  throwError
 } from "rxjs";
-import {
-  catchError,
-  filter,
-  finalize,
-  map,
-  mergeMap,
-  tap
-} from "rxjs/operators";
+import { catchError, map, mergeMap, tap } from "rxjs/operators";
 import { AppConfigs } from "./app-configs";
 import { Cron } from "./cron/cron";
 import { Repository } from "./db/repository";
@@ -30,6 +16,7 @@ import { BuyingOrder } from "./models/buying-order.model";
 import { Provider } from "./models/provider.model";
 import { AppStatusHandler } from "./websocket/app-status-handler";
 import { Statuses } from "./websocket/statuses";
+import { IServerConfigsModel } from "./server-configs.service";
 
 export interface IProviderAndOrder {
   provider: Provider;
@@ -43,6 +30,7 @@ export class NotificationScheduler {
 
   constructor(
     private configs: AppConfigs,
+    private serverCfgs: IServerConfigsModel,
     private cron: Cron,
     private apiClient: ApiClient,
     private repository: Repository,
@@ -156,33 +144,31 @@ export class NotificationScheduler {
   }
 
   private sendEmail(entry: IProviderAndOrder): Observable<any> {
-    return this.emailSender
-      .sendEmail("viola.von@ethereal.email", this.configs)
-      .pipe(
-        mergeMap(() => {
-          console.log(
-            `notification-scheduler: e-mail from order ${entry.order.id}} sent`
-          );
-          return this.persistNotificationSent(entry.order, entry.provider).pipe(
-            tap(() =>
-              console.log("notification-scheduler: notification logged")
-            )
-          );
-        }),
-        catchError(err => {
-          console.error("notification-scheduler: error sending email");
-          this.persistNotificationNotSent(
-            entry.order,
-            entry.provider
-          ).subscribe(
-            () => console.log("notification-scheduler: notification logged"),
+    const recipient =
+      this.serverCfgs.testRecipientMail &&
+      this.serverCfgs.testRecipientMail.trim().length > 3
+        ? this.serverCfgs.testRecipientMail
+        : entry.provider.email;
+    return this.emailSender.sendEmail(recipient, this.configs, entry).pipe(
+      mergeMap(() => {
+        console.log(
+          `notification-scheduler: e-mail from order ${entry.order.id}} sent`
+        );
+        return this.persistNotificationSent(entry.order, entry.provider).pipe(
+          tap(() => console.log("notification-scheduler: notification logged"))
+        );
+      }),
+      catchError(err => {
+        console.error("notification-scheduler: error sending email");
+        this.persistNotificationNotSent(entry.order, entry.provider).subscribe(
+          () => console.log("notification-scheduler: notification logged"),
 
-            () =>
-              console.log("notification-scheduler: error logging notification")
-          );
-          return throwError(err);
-        })
-      );
+          () =>
+            console.log("notification-scheduler: error logging notification")
+        );
+        return throwError(err);
+      })
+    );
   }
 
   private persistNotificationNotSent(

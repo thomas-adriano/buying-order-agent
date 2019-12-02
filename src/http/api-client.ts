@@ -1,4 +1,4 @@
-import { BehaviorSubject, EMPTY, Observable, throwError } from "rxjs";
+import { BehaviorSubject, Observable, throwError } from "rxjs";
 import { catchError, map } from "rxjs/operators";
 import { BuyingOrder } from "../models/buying-order.model";
 import { Provider } from "../models/provider.model";
@@ -8,7 +8,7 @@ export class ApiClient {
   constructor(private httpClient: HttpClient) {}
 
   public fetchBuyingOrders(): Observable<BuyingOrder[]> {
-    const resource = `/api/ordens-de-compra`;
+    const resource = `/api/ordens-de-compra?situacoes=0`;
     return this.httpClient.get(`${resource}`).pipe(
       map(
         (json: any[]) => {

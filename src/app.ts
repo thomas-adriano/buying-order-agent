@@ -1,28 +1,17 @@
-import * as fs from "fs";
-import moment from "moment";
 import "moment/locale/pt-br";
-import * as path from "path";
-import {
-  BehaviorSubject,
-  forkJoin,
-  Observable,
-  Subscriber,
-  Subscription
-} from "rxjs";
-import { catchError, map, mergeMap, tap } from "rxjs/operators";
-import { AppConfigs } from "./app-configs";
+import { Subscription } from "rxjs";
 import { Cron } from "./cron/cron";
 import { Database } from "./db/database";
 import { MigrateDb } from "./db/migrate-db";
 import { Repository } from "./db/repository";
-import { EmailSender } from "./email/email-sender";
 import { ApiClient } from "./http/api-client";
 import { HttpClient } from "./http/http-client";
-import { HttpServer, IServerConfigs } from "./http/http-server";
+import { HttpServer } from "./http/http-server";
+import { NotificationScheduler } from "./notification-scheduler";
 import { AppStatusHandler } from "./websocket/app-status-handler";
 import { Statuses } from "./websocket/statuses";
 import { WebsocketServer } from "./websocket/websocket-server";
-import { NotificationScheduler } from "./notification-scheduler";
+import { ServerConfigsService } from "./server-configs.service";
 
 console.log("app: buying-order-agent is starting...");
 
@@ -38,11 +27,11 @@ process.on("SIGINT", () => {
 
 const websocketServer = new WebsocketServer();
 const statusHandler = new AppStatusHandler(websocketServer);
+const serverConfigs = ServerConfigsService.getInstance().configs;
 
 statusHandler.init();
 statusHandler.changeStatus(Statuses.INITIALIZING);
 
-const serverConfigs = loadServerConfigs();
 const httpClient = new HttpClient(serverConfigs.apiJwt, serverConfigs.apiUrl);
 const apiClient = new ApiClient(httpClient);
 const appDb = new Database({
@@ -82,6 +71,7 @@ migrator.init().subscribe(
           const cron = new Cron(config);
           notificationShceduler = new NotificationScheduler(
             config,
+            serverConfigs,
             cron,
             apiClient,
             repository,
@@ -131,13 +121,4 @@ function shutdown(): void {
   if (websocketServer) {
     websocketServer.close();
   }
-}
-
-function loadServerConfigs(): IServerConfigs {
-  const p = `${__dirname}${path.sep}server.json`;
-  console.log(`app: reading serverConfigs from ${p}`);
-  const fc = fs.readFileSync(p, "utf8");
-  console.log(`app: serverConfigs file loaded ${fc}`);
-  const c = JSON.parse(fc) as IServerConfigs;
-  return c;
 }

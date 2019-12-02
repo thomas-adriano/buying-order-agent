@@ -11,8 +11,9 @@
     "stop:pm2": "pm2 stop BUYING-ORDER-AGENT",
     "restart:pm2": "pm2 restart BUYING-ORDER-AGENT",
     "watch-ts:pm2": "pm2 start --watch",
-    "build-ts": "cp ./src/server.json ./dist/server.json && tsc",
-    "watch-ts": "cp ./src/server.json ./dist/server.json && tsc -w",
+    "copy-assets": "cp ./src/server.json ./dist/server.json && cp ./ecosystem.config.js ./dist/ecosystem.config.js",
+    "build-ts": "npm run copy-assets && tsc",
+    "watch-ts": "npm run copy-assets && tsc -w",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

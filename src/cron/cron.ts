@@ -13,20 +13,27 @@ export class Cron {
       console.log(
         `cron: registering cron job ${this.configs.getAppCronPattern()}`
       );
-      this.cronJob = new CronJob(
-        this.configs.getAppCronPattern(),
-        () => {
-          console.log(
-            `cron: running cron job ${this.configs.getAppCronPattern()}`
-          );
-          observer.next();
-        },
-        undefined,
-        true,
-        this.configs.getAppCronTimezone()
-      );
-      console.log(`cron: starting cron job`);
-      this.cronJob.start();
+      try {
+        this.cronJob = new CronJob(
+          this.configs.getAppCronPattern(),
+          () => {
+            console.log(
+              `cron: running cron job ${this.configs.getAppCronPattern()}`
+            );
+            observer.next();
+          },
+          undefined,
+          true,
+          this.configs.getAppCronTimezone()
+        );
+        console.log(`cron: starting cron job`);
+        this.cronJob.start();
+      } catch (e) {
+        console.error(
+          "Ocorreu um erro tentando inicializar o Cron. Verifique o Cron Pattern informado. Mais informações em https://github.com/kelektiv/node-cron#cron-ranges"
+        );
+        observer.error(e);
+      }
     });
   }
 

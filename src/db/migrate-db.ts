@@ -1,10 +1,9 @@
-import { forkJoin, Observable, zip, merge, concat } from "rxjs";
-import { finalize, map } from "rxjs/operators";
-import { IServerConfigs } from "../http/http-server";
+import { Observable, zip } from "rxjs";
+import { IServerConfigsModel } from "../server-configs.service";
 import { Database } from "./database";
 
 export class MigrateDb {
-  constructor(private configs: IServerConfigs, private db: Database) {}
+  constructor(private configs: IServerConfigsModel, private db: Database) {}
 
   public init(): Observable<any> {
     console.log(`migration: starting`);

@@ -1,4 +1,5 @@
 {
+    "testRecipientMail": "viola.von@ethereal.email",
     "appHost": "0.0.0.0",
     "appPort": 8888,
     "dbAppUser": "buyingorderagent",

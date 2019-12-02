@@ -1,6 +1,6 @@
 import * as mysql from "mysql";
-import { Observable, Observer, ReplaySubject, Subject, throwError } from "rxjs";
-import { catchError, mergeMap, map } from "rxjs/operators";
+import { Observable, Observer, Subject, throwError } from "rxjs";
+import { catchError } from "rxjs/operators";
 
 export class Database {
   private connection: mysql.Connection | undefined;
@@ -28,7 +28,8 @@ export class Database {
       catchError(err => {
         console.error("database: error executing sql stmt", err);
         return throwError(err);
-      })
+      }),
+      () => subject.complete()
     );
     return subject.asObservable();
   }
@@ -50,6 +51,7 @@ export class Database {
           this.connection = undefined;
         } else {
           observer.next(false);
+          observer.complete();
         }
       } catch (e) {
         console.error(`database: could not close connection`);
@@ -94,6 +96,7 @@ export class Database {
           } else {
             this.restartDcTimeout();
             this.connSubject.next(this.connection);
+            this.connecting = false;
             console.log("database: connection established");
           }
         });
@@ -101,7 +104,6 @@ export class Database {
         this.connection.on("end", () => {
           console.log("database: connection end");
           this.clearDcTimeout();
-          this.connecting = false;
         });
       });
     } else if (this.connection && this.connection.state !== "disconnected") {

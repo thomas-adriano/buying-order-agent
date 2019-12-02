@@ -1,14 +1,14 @@
 import moment from "moment";
 import { BehaviorSubject, Observable, throwError } from "rxjs";
-import { catchError, map, tap } from "rxjs/operators";
+import { catchError, map } from "rxjs/operators";
 import { AppConfigs } from "../app-configs";
-import { IServerConfigs } from "../http/http-server";
 import { BuyingOrder } from "../models/buying-order.model";
 import { Provider } from "../models/provider.model";
+import { IServerConfigsModel } from "../server-configs.service";
 import { Database } from "./database";
 
 export class Repository {
-  constructor(private db: Database, private configs: IServerConfigs) {}
+  constructor(private db: Database, private configs: IServerConfigsModel) {}
 
   public end(): void {
     this.db.end();

@@ -3,20 +3,7 @@ import { Observable, Observer, Subject } from "rxjs";
 import * as url from "url";
 import { AppConfigs } from "../app-configs";
 import { Repository } from "../db/repository";
-import { AppStatusHandler } from "../websocket/app-status-handler";
-
-export interface IServerConfigs {
-  appHost: string;
-  appPort: number;
-  dbAppUser: string;
-  dbRootUser: string;
-  dbRootPassword: string;
-  dbHost: string;
-  appDatabase: string;
-  dbAppPassword: string;
-  apiUrl: string;
-  apiJwt: string;
-}
+import { IServerConfigsModel } from "../server-configs.service";
 
 export class HttpServer {
   private server: http.Server;
@@ -25,7 +12,7 @@ export class HttpServer {
   private configSavedSubject = new Subject<AppConfigs>();
 
   constructor(
-    private configs: IServerConfigs,
+    private configs: IServerConfigsModel,
     private repository: Repository
   ) {}
 
