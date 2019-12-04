@@ -9,6 +9,7 @@ export interface IServerConfigsModel {
   dbRootUser: string;
   dbRootPassword: string;
   dbHost: string;
+  dbPort: number;
   appDatabase: string;
   dbAppPassword: string;
   apiUrl: string;

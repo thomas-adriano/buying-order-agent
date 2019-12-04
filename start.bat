@@ -9,12 +9,13 @@ IF %ERRORLEVEL% NEQ 0 (
 call npm -v
 IF %ERRORLEVEL% NEQ 0 (
     echo errorlevel %ERRORLEVEL%
-    choco install npm
+    choco install nodejs
 )
 
+call npm i -g npm
 cd bin
 call npm i -g pm2
-start pm2 start
+call pm2 start
 start pm2 monit
 
 cd..

@@ -38,7 +38,8 @@ const appDb = new Database({
   database: serverConfigs.appDatabase,
   host: serverConfigs.dbHost,
   password: serverConfigs.dbAppPassword,
-  user: serverConfigs.dbAppUser
+  user: serverConfigs.dbAppUser,
+  port: serverConfigs.dbPort
 });
 const rootDb = new Database({
   host: serverConfigs.dbHost,

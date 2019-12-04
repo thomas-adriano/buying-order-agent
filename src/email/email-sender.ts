@@ -45,6 +45,7 @@ export class EmailSender {
       .replace(/\$\{providerName\}/g, `${entry.provider.nome}`)
       .replace(/\$\{orderNumber\}/g, `${entry.order.id}`)
       .replace(/\$\{orderDate\}/g, `${entry.order.data}`)
+      .replace(/\$\{previewOrderDate\}/g, `${entry.order.dataPrevista}`)
       .replace(/\$\{orderContactName\}/g, `${entry.order.nomeContato}`);
   }
 }
