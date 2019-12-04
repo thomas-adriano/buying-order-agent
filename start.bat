@@ -15,8 +15,8 @@ IF %ERRORLEVEL% NEQ 0 (
 call npm i -g npm
 cd bin
 call npm i -g pm2
-call pm2 start
 start pm2 monit
+call pm2 start
 
 cd..
 pause
