@@ -1,6 +1,6 @@
 {
-  "name": "buying-order-agent",
-  "version": "0.0.1",
+  "name": "buying-order-agent-server",
+  "version": "1.0.0",
   "description": "Sends e-mail notifications near buying orders expiration.",
   "main": "dist/app.js",
   "scripts": {
@@ -8,8 +8,8 @@
     "debug": "node --nolazy --inspect-brk=9229 dist/app.js",
     "start": "node dist/app.js",
     "start:pm2": "pm2 start",
-    "stop:pm2": "pm2 stop BUYING-ORDER-AGENT",
-    "restart:pm2": "pm2 restart BUYING-ORDER-AGENT",
+    "stop:pm2": "pm2 stop buying-order-agent-server",
+    "restart:pm2": "pm2 restart buying-order-agent-server",
     "watch-ts:pm2": "pm2 start --watch",
     "copy-assets": "cp ./src/server.json ./dist/server.json && cp ./ecosystem.config.js ./dist/ecosystem.config.js",
     "build-ts": "npm run copy-assets && tsc",
@@ -18,14 +18,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/thomas-adriano/buying-order-agent.git"
+    "url": "git+https://github.com/thomas-adriano/buying-order-agent-server.git"
   },
   "author": "thomas.o.adriano@gmail.com",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/thomas-adriano/buying-order-agent/issues"
+    "url": "https://github.com/thomas-adriano/buying-order-agent-server/issues"
   },
-  "homepage": "https://github.com/thomas-adriano/buying-order-agent#readme",
+  "homepage": "https://github.com/thomas-adriano/buying-order-agent-server#readme",
   "devDependencies": {
     "@types/cron": "^1.7.1",
     "@types/mysql": "^2.15.7",

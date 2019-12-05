@@ -239,7 +239,6 @@ export class NotificationScheduler {
   }
 
   private fetchBuyingOrders(): Observable<BuyingOrder[]> {
-    const subject = new Subject<BuyingOrder[]>();
     const today: moment.Moment = moment();
     const orders = this.apiClient.fetchBuyingOrders().pipe(
       map(os => {
@@ -248,43 +247,22 @@ export class NotificationScheduler {
           `notification-scheduler: filtering orders ${delta} day(s) old`
         );
         return os.filter(o => {
-          if (!o.data) {
+          if (!o.dataPrevista) {
             return false;
           }
-          const orderDate = moment(o.data, "DD-MM-YYYY");
+
+          const orderDate = moment(o.dataPrevista, "DD-MM-YYYY");
+
+          if (today.isAfter(orderDate)) {
+            return true;
+          }
+
           const diff = today.diff(orderDate, "days");
-          return diff > delta;
+          return diff >= delta;
         });
       })
     );
-    const unprocessedOrders: BuyingOrder[] = [];
-    orders.subscribe(os => {
-      const total = os.length;
-      console.log(`notification-scheduler: ${total} orders filtered`);
-      console.log(`notification-scheduler: filtering unprocessed orders`);
-      let count = 0;
-      os.forEach(o => {
-        this.repository.isOrderAlreadyProcessed(o).subscribe(
-          processed => {
-            if (!processed) {
-              unprocessedOrders.push(o);
-            }
-            count++;
-            if (count === total) {
-              console.log(
-                `notification-scheduler: ${unprocessedOrders.length} unprocessed orders filtered`
-              );
-              subject.next(unprocessedOrders);
-              subject.complete();
-            }
-          },
-          err => {
-            subject.error(err);
-          }
-        );
-      });
-    });
-    return subject.asObservable();
+    return orders;
   }
 
   private fetchProvidersById(id: string | undefined): Observable<Provider> {

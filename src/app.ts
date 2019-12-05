@@ -13,7 +13,7 @@ import { Statuses } from "./websocket/statuses";
 import { WebsocketServer } from "./websocket/websocket-server";
 import { ServerConfigsService } from "./server-configs.service";
 
-console.log("app: buying-order-agent is starting...");
+console.log("app: buying-order-agent-server is starting...");
 
 process.on("message", msg => {
   if (msg === "shutdown") {

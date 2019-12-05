@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "buying-order-agent",
+      name: "buying-order-agent-server",
       script: "app.js",
       // Options reference: https://pm2.keymetrics.io/docs/usage/application-declaration/
       args: "one two",
