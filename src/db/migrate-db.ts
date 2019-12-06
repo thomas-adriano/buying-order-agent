@@ -64,7 +64,7 @@ export class MigrateDb {
 
   private createUser(): Observable<void> {
     return this.db.execute(
-      `CREATE USER IF NOT EXISTS '${this.configs.dbAppUser}' IDENTIFIED BY '${this.configs.dbAppPassword}'`
+      `CREATE USER IF NOT EXISTS '${this.configs.dbAppUser}' IDENTIFIED WITH mysql_native_password BY '${this.configs.dbAppPassword}'`
     );
   }
 
