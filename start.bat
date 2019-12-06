@@ -1,5 +1,7 @@
 @echo off
 
+IF "%1" == "--update" (set UPDATE_TOOLS=false) else (set UPDATE_TOOLS=true)
+
 choco -v
 IF %ERRORLEVEL% NEQ 0 (
     echo errorlevel %ERRORLEVEL%
@@ -12,11 +14,14 @@ IF %ERRORLEVEL% NEQ 0 (
     choco install nodejs
 )
 
-call npm i -g npm
+if "%UPDATE_TOOLS%" == "true" (
+    call npm i -g npm
+    call npm i -g pm2
+)
+
 cd bin
-call npm i -g pm2
 start pm2 monit
-call pm2 start
+pm2 start
 
 cd..
 pause
