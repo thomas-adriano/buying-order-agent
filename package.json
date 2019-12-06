@@ -12,8 +12,8 @@
     "restart:pm2": "pm2 restart buying-order-agent-server",
     "watch-ts:pm2": "pm2 start --watch",
     "copy-assets": "cp ./src/server.json ./dist/server.json && cp ./ecosystem.config.js ./dist/ecosystem.config.js",
-    "build-ts": "npm run copy-assets && tsc",
-    "watch-ts": "npm run copy-assets && tsc -w",
+    "build": "npm run copy-assets && tsc",
+    "watch": "npm run copy-assets && tsc -w",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
