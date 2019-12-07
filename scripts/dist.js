@@ -1,6 +1,7 @@
 const path = require("path");
 const { exec } = require("child_process");
 const fs = require("fs");
+const zip = new require("node-zip")();
 
 console.log("executing dist...");
 const rootPath = path.resolve(__dirname, "..");
@@ -42,6 +43,15 @@ exec("webpack", { cwd: rootPath }, (err, stdout, stderr) => {
   fs.copyFile(serverJsonPath, path.resolve(distDir, "server.json"), err => {
     if (err) throw err;
   });
+
+  zip.file("bundle.js", fs.readFileSync(bundlePath));
+  zip.file("start.bat", fs.readFileSync(batPath));
+  zip.file("ecosystem.config.js", fs.readFileSync(ecosystemPath));
+  zip.file("server.json", fs.readFileSync(serverJsonPath));
+
+  const data = zip.generate({ base64: false, compression: "DEFLATE" });
+
+  fs.writeFileSync("server.zip", data, "binary");
 
   console.error("dist finished");
 });
