@@ -1,19 +1,19 @@
 {
   "name": "buying-order-agent-server",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Sends e-mail notifications near buying orders expiration.",
   "main": "dist/app.js",
   "scripts": {
     "monit": "pm2 monit",
     "debug": "node --nolazy --inspect-brk=9229 dist/app.js",
-    "start": "npm run copy-assets && node dist/app.js",
-    "start:pm2": "npm run copy-assets && pm2 start",
+    "start": "node dist/app.js",
+    "start:pm2": "pm2 start",
     "stop:pm2": "pm2 stop buying-order-agent-server",
     "restart:pm2": "pm2 restart buying-order-agent-server",
     "watch-ts:pm2": "pm2 start --watch",
-    "copy-assets": "cp ./src/server.json ./dist/server.json && cp ./ecosystem.config.js ./dist/ecosystem.config.js",
-    "build": "tsc && npm run copy-assets",
+    "build": "webpack",
     "watch": "tsc -w",
+    "dist": "node scripts/dist.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -32,10 +32,15 @@
     "@types/node": "^12.7.12",
     "@types/nodemailer": "^6.2.1",
     "@types/ws": "^6.0.3",
+    "clean-webpack-plugin": "^3.0.0",
+    "copy-webpack-plugin": "^5.0.5",
     "pm2": "^4.0.0",
     "rxjs": "^6.5.3",
+    "ts-loader": "^6.2.1",
     "tslint": "^5.20.0",
-    "typescript": "^3.6.4"
+    "typescript": "^3.6.4",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.10"
   },
   "dependencies": {
     "cron": "^1.7.2",

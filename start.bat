@@ -19,8 +19,8 @@ if "%UPDATE_TOOLS%" == "true" (
     call npm i -g pm2
 )
 
-cd bin
 start pm2 monit
+sleep 5
 pm2 start
 
 cd..

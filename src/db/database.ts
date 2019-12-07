@@ -92,6 +92,7 @@ export class Database {
         this.connection.connect(err => {
           this.connecting = false;
           if (err) {
+            console.error(err);
             this.connSubject.error(err);
           } else {
             this.restartDcTimeout();
