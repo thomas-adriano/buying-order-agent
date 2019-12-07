@@ -1,6 +1,6 @@
 {
   "name": "buying-order-agent-server",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Sends e-mail notifications near buying orders expiration.",
   "main": "dist/app.js",
   "scripts": {

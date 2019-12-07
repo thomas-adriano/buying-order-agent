@@ -78,11 +78,15 @@ migrator.init().subscribe(
             repository,
             statusHandler
           );
+          let counter = 0;
           notificationShcedulerSubscriber = notificationShceduler
             .start()
             .subscribe(
               total => {
-                console.log(`app: ${total} orders verified`);
+                counter++;
+                console.log(
+                  `app: ${total} orders verified. ${counter} cycles.`
+                );
               },
               err => {
                 console.error(err);
