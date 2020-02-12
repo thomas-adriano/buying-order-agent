@@ -28,26 +28,26 @@
   "homepage": "https://github.com/thomas-adriano/buying-order-agent-server#readme",
   "devDependencies": {
     "@types/cron": "^1.7.1",
-    "@types/mysql": "^2.15.7",
-    "@types/node": "^12.7.12",
-    "@types/nodemailer": "^6.2.1",
-    "@types/ws": "^6.0.3",
+    "@types/mysql": "^2.15.8",
+    "@types/node": "^12.12.27",
+    "@types/nodemailer": "^6.4.0",
+    "@types/ws": "^6.0.4",
     "clean-webpack-plugin": "^3.0.0",
-    "copy-webpack-plugin": "^5.0.5",
+    "copy-webpack-plugin": "^5.1.1",
     "node-zip": "^1.1.1",
-    "pm2": "^4.0.0",
-    "rxjs": "^6.5.3",
+    "pm2": "^4.2.3",
+    "rxjs": "^6.5.4",
     "ts-loader": "^6.2.1",
-    "tslint": "^5.20.0",
-    "typescript": "^3.6.4",
-    "webpack": "^4.41.2",
-    "webpack-cli": "^3.3.10"
+    "tslint": "^5.20.1",
+    "typescript": "^3.7.5",
+    "webpack": "^4.41.6",
+    "webpack-cli": "^3.3.11"
   },
   "dependencies": {
-    "cron": "^1.7.2",
+    "cron": "^1.8.2",
     "moment": "^2.24.0",
-    "mysql": "^2.17.1",
-    "nodemailer": "^6.3.1",
-    "ws": "^7.2.0"
+    "mysql": "^2.18.1",
+    "nodemailer": "^6.4.2",
+    "ws": "^7.2.1"
   }
 }

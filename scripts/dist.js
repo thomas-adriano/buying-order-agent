@@ -23,6 +23,7 @@ exec("webpack", { cwd: rootPath }, (err, stdout, stderr) => {
   const batPath = path.resolve(rootPath, "start.bat");
   const ecosystemPath = path.resolve(rootPath, "ecosystem.config.js");
   const serverJsonPath = path.resolve(rootPath, "src/server.json");
+  const blacklistPath = path.resolve(rootPath, "src/email-blacklist.txt");
 
   fs.copyFile(bundlePath, path.resolve(distDir, "bundle.js"), err => {
     if (err) throw err;
@@ -44,10 +45,19 @@ exec("webpack", { cwd: rootPath }, (err, stdout, stderr) => {
     if (err) throw err;
   });
 
+  fs.copyFile(
+    blacklistPath,
+    path.resolve(distDir, "email-blacklist.txt"),
+    err => {
+      if (err) throw err;
+    }
+  );
+
   zip.file("bundle.js", fs.readFileSync(bundlePath));
   zip.file("start.bat", fs.readFileSync(batPath));
   zip.file("ecosystem.config.js", fs.readFileSync(ecosystemPath));
   zip.file("server.json", fs.readFileSync(serverJsonPath));
+  zip.file("email-blacklist.txt", fs.readFileSync(blacklistPath));
 
   const data = zip.generate({ base64: false, compression: "DEFLATE" });
 

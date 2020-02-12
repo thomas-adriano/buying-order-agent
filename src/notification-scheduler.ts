@@ -4,7 +4,8 @@ import {
   Observable,
   Subject,
   Subscriber,
-  throwError
+  throwError,
+  of
 } from "rxjs";
 import { catchError, map, mergeMap, tap } from "rxjs/operators";
 import { AppConfigs } from "./app-configs";
@@ -14,9 +15,11 @@ import { EmailSender } from "./email/email-sender";
 import { ApiClient } from "./http/api-client";
 import { BuyingOrder } from "./models/buying-order.model";
 import { Provider } from "./models/provider.model";
+import { IServerConfigsModel } from "./server-configs.service";
 import { AppStatusHandler } from "./websocket/app-status-handler";
 import { Statuses } from "./websocket/statuses";
-import { IServerConfigsModel } from "./server-configs.service";
+import * as fs from "fs";
+import * as path from "path";
 
 export interface IProviderAndOrder {
   provider: Provider;
@@ -24,6 +27,8 @@ export interface IProviderAndOrder {
 }
 
 export class NotificationScheduler {
+  private readonly blacklistFilePath = `${__dirname}${path.sep}email-blacklist.json`;
+  private recipientsBlacklist: string[];
   private executing = false;
   private subscriptions = new Subscriber();
   private emailSender: EmailSender;
@@ -149,6 +154,24 @@ export class NotificationScheduler {
       this.serverCfgs.testRecipientMail.trim().length > 3
         ? this.serverCfgs.testRecipientMail
         : entry.provider.email;
+    if (!this.recipientsBlacklist) {
+      this.recipientsBlacklist = fs
+        .readFileSync(this.blacklistFilePath, "utf8")
+        .split(/\r?\n/g)
+        .map(e => e.trim())
+        .filter(e => !!e && e.length > 0);
+      console.log(
+        "notification-scheduler: blacklist file loaded",
+        this.recipientsBlacklist
+      );
+    }
+    if (this.recipientsBlacklist.find(r => r === recipient)) {
+      console.log(
+        "notification-scheduler: ignoring blacklisted e-mail",
+        recipient
+      );
+      return of(undefined);
+    }
     return this.emailSender.sendEmail(recipient, this.configs, entry).pipe(
       mergeMap(() => {
         console.log(

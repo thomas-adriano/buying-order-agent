@@ -8,10 +8,10 @@ import { ApiClient } from "./http/api-client";
 import { HttpClient } from "./http/http-client";
 import { HttpServer } from "./http/http-server";
 import { NotificationScheduler } from "./notification-scheduler";
+import { ServerConfigsService } from "./server-configs.service";
 import { AppStatusHandler } from "./websocket/app-status-handler";
 import { Statuses } from "./websocket/statuses";
 import { WebsocketServer } from "./websocket/websocket-server";
-import { ServerConfigsService } from "./server-configs.service";
 
 console.log("app: buying-order-agent-server is starting...");
 
