@@ -1,3 +1,0 @@
-test-email@mail.com
-test-email2@mail.com
-test-email3@mail.com

@@ -5,8 +5,11 @@ import { from, Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 import { AppConfigs } from "../app-configs";
 import { IProviderAndOrder } from "../notification-scheduler";
+import { ServerConfigsService } from "../server-configs.service";
 
 export class EmailSender {
+  private serverConfigsService = ServerConfigsService.getInstance();
+
   constructor(private transportConfigs: SMTPTransport.Options) {}
 
   public sendEmail(
@@ -41,11 +44,20 @@ export class EmailSender {
     if (!content) {
       return content;
     }
-    return content
+
+    let ret = content
       .replace(/\$\{providerName\}/g, `${entry.provider.nome}`)
       .replace(/\$\{orderNumber\}/g, `${entry.order.id}`)
       .replace(/\$\{orderDate\}/g, `${entry.order.data}`)
       .replace(/\$\{previewOrderDate\}/g, `${entry.order.dataPrevista}`)
       .replace(/\$\{orderContactName\}/g, `${entry.order.nomeContato}`);
+
+    if (this.serverConfigsService.configs.replyLink) {
+      ret = ret.replace(
+        /\$\{replyLink\}/g,
+        `<a class="reply-link" href="${this.serverConfigsService.configs.replyLink}">Definir uma nova data</a>`
+      );
+    }
+    return ret;
   }
 }

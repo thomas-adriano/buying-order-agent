@@ -10,5 +10,6 @@
     "dbPort": 3306,
     "appDatabase": "INSPIRE_HOME",
     "apiUrl": "inspirehome.eccosys.com.br",
-    "apiJwt": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZEVtcHJlc2EiOjM0MzQwOTgxMSwiaWRVc3VhcmlvIjo0MDA0MTI2NjYsImRhdGFiYXNlIjoiZWNjb3N5cyIsImFkbWluIjpmYWxzZSwianRpIjoiNWQ5ZTMyOWFjZTc4NyIsImlhdCI6MTU3MDY0ODczMH0.cCWGfOcG76FRxDlIkCJ2GwD9g4e8Ki37app3s67joUo"
+    "apiJwt": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZEVtcHJlc2EiOjM0MzQwOTgxMSwiaWRVc3VhcmlvIjo0MDA0MTI2NjYsImRhdGFiYXNlIjoiZWNjb3N5cyIsImFkbWluIjpmYWxzZSwianRpIjoiNWQ5ZTMyOWFjZTc4NyIsImlhdCI6MTU3MDY0ODczMH0.cCWGfOcG76FRxDlIkCJ2GwD9g4e8Ki37app3s67joUo",
+    "replyLink": "http://localhost:4200/reply"
 }

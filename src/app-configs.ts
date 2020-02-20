@@ -10,9 +10,10 @@ export class AppConfigs {
   private appEmailSubject: string;
   private appEmailText: string;
   private appEmailHtml: string;
+  private appBlacklist: string;
   // cron
-  private appCronPattern = '0,5,10,15,20,25,30,35,40,45,50,55 * * * * *';
-  private appCronTimezone = 'America/Sao_Paulo';
+  private appCronPattern = "0,5,10,15,20,25,30,35,40,45,50,55 * * * * *";
+  private appCronTimezone = "America/Sao_Paulo";
   private appNotificationTriggerDelta = 7;
 
   public getAppEmailName(): string {
@@ -131,6 +132,15 @@ export class AppConfigs {
     appNotificationTriggerDelta: number
   ): AppConfigs {
     this.appNotificationTriggerDelta = appNotificationTriggerDelta;
+    return this;
+  }
+
+  public getAppBlacklist(): string {
+    return this.appBlacklist;
+  }
+
+  public setAppBlacklist(appBlacklist: string): AppConfigs {
+    this.appBlacklist = appBlacklist;
     return this;
   }
 }

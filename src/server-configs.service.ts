@@ -14,6 +14,7 @@ export interface IServerConfigsModel {
   dbAppPassword: string;
   apiUrl: string;
   apiJwt: string;
+  replyLink: string;
 }
 
 export class ServerConfigsService {

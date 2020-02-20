@@ -94,7 +94,8 @@ export class Repository {
                 appEmailHtml,
                 appCronPattern,
                 appCronTimezone,
-                appNotificationTriggerDelta
+                appNotificationTriggerDelta,
+                appBlacklist
               )
                 VALUES
               (
@@ -110,7 +111,8 @@ export class Repository {
                 '${configs.getAppEmailHtml()}',
                 '${configs.getAppCronPattern()}',
                 '${configs.getAppCronTimezone()}',
-                '${configs.getAppNotificationTriggerDelta()}'
+                '${configs.getAppNotificationTriggerDelta()}',
+                '${configs.getAppBlacklist()}'
               );`
       )
       .pipe(
@@ -148,7 +150,8 @@ export class Repository {
               .setAppEmailSubject(res.appEmailSubject)
               .setAppEmailPassword(res.appEmailPassword)
               .setAppEmailFrom(res.appEmailFrom)
-              .setAppNotificationTriggerDelta(res.appNotificationTriggerDelta);
+              .setAppNotificationTriggerDelta(res.appNotificationTriggerDelta)
+              .setAppBlacklist(res.appBlacklist);
           } else {
             return new AppConfigs();
           }

@@ -44,6 +44,7 @@ export class MigrateDb {
             \`appEmailName\` VARCHAR(128),
             \`appEmailUser\` VARCHAR(128),
             \`appEmailPassword\` VARCHAR(128),
+            \`appBlacklist\` VARCHAR(8192),
             \`appSMTPAddress\` VARCHAR(128),
             \`appSMTPPort\` INT,
             \`appSMTPSecure\` BOOL,

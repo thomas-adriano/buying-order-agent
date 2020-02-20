@@ -2,10 +2,10 @@ import moment from "moment";
 import {
   BehaviorSubject,
   Observable,
+  of,
   Subject,
   Subscriber,
-  throwError,
-  of
+  throwError
 } from "rxjs";
 import { catchError, map, mergeMap, tap } from "rxjs/operators";
 import { AppConfigs } from "./app-configs";
@@ -18,8 +18,6 @@ import { Provider } from "./models/provider.model";
 import { IServerConfigsModel } from "./server-configs.service";
 import { AppStatusHandler } from "./websocket/app-status-handler";
 import { Statuses } from "./websocket/statuses";
-import * as fs from "fs";
-import * as path from "path";
 
 export interface IProviderAndOrder {
   provider: Provider;
@@ -27,7 +25,6 @@ export interface IProviderAndOrder {
 }
 
 export class NotificationScheduler {
-  private readonly blacklistFilePath = `${__dirname}${path.sep}email-blacklist.json`;
   private recipientsBlacklist: string[];
   private executing = false;
   private subscriptions = new Subscriber();
@@ -155,8 +152,7 @@ export class NotificationScheduler {
         ? this.serverCfgs.testRecipientMail
         : entry.provider.email;
     if (!this.recipientsBlacklist) {
-      this.recipientsBlacklist = fs
-        .readFileSync(this.blacklistFilePath, "utf8")
+      this.recipientsBlacklist = (this.configs.getAppBlacklist() || "")
         .split(/\r?\n/g)
         .map(e => e.trim())
         .filter(e => !!e && e.length > 0);
