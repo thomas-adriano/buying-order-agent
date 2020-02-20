@@ -55,7 +55,7 @@ export class EmailSender {
     if (this.serverConfigsService.configs.replyLink) {
       ret = ret.replace(
         /\$\{replyLink\}/g,
-        `<a class="reply-link" href="${this.serverConfigsService.configs.replyLink}">Definir uma nova data</a>`
+        `<a class="reply-link" href="${this.serverConfigsService.configs.replyLink}?providerId=${entry.provider.id}">Definir uma nova data</a>`
       );
     }
     return ret;
