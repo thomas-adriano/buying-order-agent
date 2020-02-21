@@ -53,7 +53,8 @@ export class HttpServer {
               .setAppEmailFrom(json.appEmailFrom)
               .setAppEmailText(json.appEmailText)
               .setAppEmailHtml(json.appEmailHtml)
-              .setAppNotificationTriggerDelta(json.appNotificationTriggerDelta);
+              .setAppNotificationTriggerDelta(json.appNotificationTriggerDelta)
+              .setAppBlacklist(json.appBlacklist);
             this.configSavedSubject.next(c);
           });
         }

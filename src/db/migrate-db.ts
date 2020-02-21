@@ -36,7 +36,7 @@ export class MigrateDb {
             \`providerEmail\` VARCHAR(128),
             \`employeeEmail\` VARCHAR(128)
           )
-          ENGINE = InnoDB;`
+          ROW_FORMAT=DYNAMIC ENGINE=InnoDB;`
       ),
       this.db.execute(
         `CREATE TABLE IF NOT EXISTS \`${this.configs.appDatabase}\`.\`configuration\` (
@@ -44,7 +44,7 @@ export class MigrateDb {
             \`appEmailName\` VARCHAR(128),
             \`appEmailUser\` VARCHAR(128),
             \`appEmailPassword\` VARCHAR(128),
-            \`appBlacklist\` VARCHAR(8192),
+            \`appBlacklist\` VARCHAR(7000),
             \`appSMTPAddress\` VARCHAR(128),
             \`appSMTPPort\` INT,
             \`appSMTPSecure\` BOOL,
@@ -58,7 +58,7 @@ export class MigrateDb {
             \`appCronTimezone\` VARCHAR(128),
             \`appNotificationTriggerDelta\` INT
           )
-          ENGINE = InnoDB;`
+          ROW_FORMAT=DYNAMIC ENGINE=InnoDB;`
       )
     );
   }
