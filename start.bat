@@ -1,6 +1,6 @@
 @echo off
 
-IF "%1" == "--update" (set UPDATE_TOOLS=false) else (set UPDATE_TOOLS=true)
+IF "%1" == "--update" (set UPDATE_TOOLS=true) else (set UPDATE_TOOLS=false)
 
 choco -v
 IF %ERRORLEVEL% NEQ 0 (
@@ -21,7 +21,7 @@ if "%UPDATE_TOOLS%" == "true" (
 
 start pm2 monit
 sleep 5
-pm2 start
+call pm2 start
 
 cd..
 pause
