@@ -14,13 +14,19 @@ IF %ERRORLEVEL% NEQ 0 (
     choco install nodejs
 )
 
+call pm2 -v
+IF %ERRORLEVEL% NEQ 0 (
+    echo errorlevel %ERRORLEVEL%
+    npm i -g pm2
+)
+
 if "%UPDATE_TOOLS%" == "true" (
     call npm i -g npm
     call npm i -g pm2
 )
 
 start pm2 monit
-sleep 5
+timeout /t 5 /nobreak
 call pm2 start
 
 cd..
