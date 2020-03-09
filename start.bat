@@ -17,7 +17,7 @@ IF %ERRORLEVEL% NEQ 0 (
 call pm2 -v
 IF %ERRORLEVEL% NEQ 0 (
     echo errorlevel %ERRORLEVEL%
-    npm i -g pm2
+    call npm i -g pm2
 )
 
 if "%UPDATE_TOOLS%" == "true" (
