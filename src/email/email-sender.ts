@@ -20,7 +20,7 @@ export class EmailSender {
     return this.doSendEmail({
       from: `"${configs.getAppEmailName()}" <${configs.getAppEmailFrom()}>`, // sender address
       to, // list of receivers
-      subject: configs.getAppEmailSubject(), // Subject line
+      subject: this.interpolateVariables(configs.getAppEmailSubject(), entry), // Subject line
       text: this.interpolateVariables(configs.getAppEmailText(), entry), // plain text body
       html: this.interpolateVariables(configs.getAppEmailHtml(), entry) // html body
     });
@@ -32,7 +32,7 @@ export class EmailSender {
     // Preview URL: https://ethereal.email/message/WaQKMgKddxQDoou...
     return from(transporter.sendMail(emailConfigs)).pipe(
       tap(() =>
-        console.log(`email-sender: sending e-mail to ${emailConfigs.to}`)
+        console.log(`email-sender: sending e-mail to ${emailConfigs.to} with Subject ${emailConfigs.subject}`)
       )
     );
   }
